@@ -1,0 +1,98 @@
+function animate_lifted_solver_trajectory(data_path)
+
+    res_path = strrep(data_path, ".mat", "_results.mat");
+    solver_info_path = strrep(data_path, ".mat", "_solver_info.mat");
+
+    problem_data = load_ra_slam_problem(data_path);
+    load(res_path);
+    load(solver_info_path);
+
+    num_iterates = length(manopt_info);
+    [num_cols, num_rows] = size(problem_data.X_odom);
+    Xvals_rounded = zeros(num_iterates, num_rows, num_cols);
+    max_x = -inf;
+    min_x = inf;
+    max_y = -inf;
+    min_y = inf;
+    for idx = 1:num_iterates
+        Xvals_rounded(idx, :, :) = align_solution_by_first_pose(...
+            round_solution(manopt_info(idx).Xvals',problem_data), problem_data...
+        );
+        if max(max(max(Xvals_rounded(idx, :, :)))) > max_x
+            max_x = max(max(max(Xvals_rounded(idx, :, :))));
+        end
+        if min(min(min(Xvals_rounded(idx, :, :)))) < min_x
+            min_x = min(min(min(Xvals_rounded(idx, :, :))));
+        end
+        if max(max(max(Xvals_rounded(idx, :, :)))) > max_y
+            max_y = max(max(max(Xvals_rounded(idx, :, :))));
+        end
+        if min(min(min(Xvals_rounded(idx, :, :)))) < min_y
+            min_y = min(min(min(Xvals_rounded(idx, :, :))));
+        end
+    end
+
+    fig = clf(figure(2));
+    hold on;
+
+    % set axis limits
+    x_spread = abs(max_x - min_x);
+    y_spread = abs(max_y - min_y);
+    xlim([min_x - x_spread/10, max_x + x_spread/10]);
+    ylim([min_y - y_spread/10, max_y + y_spread/10]);
+
+    % Xvals_rounded is a 3D array of size (num_iterates, num_rows, num_cols)
+    % we want to animate the 2D slices of the 3D array by slicing along the
+    % first dimension
+    warning("untested for multirobot");
+
+
+    t_idxs = problem_data.all_t_idxs;
+    l_idxs = problem_data.all_l_idxs;
+
+    
+    gt_pose_plot = plot(problem_data.X_gt(t_idxs, 1), problem_data.X_gt(t_idxs, 2));
+    gt_landmark_plot = scatter(problem_data.X_gt(l_idxs, 1), problem_data.X_gt(l_idxs, 2), 20, 'rx');
+
+    Xvals = squeeze(Xvals_rounded(1, :, :));
+
+    num_robots = problem_data.num_robots;
+
+    % set some utilities to help with the different robot plots
+    robot_plots = cell(num_robots, 1);
+    robot_t_idxs = cell(num_robots, 1);
+    for robot_idx = 1:num_robots
+        robot_t_idxs{robot_idx} = get_robot_t_idxs(problem_data, robot_idx);
+        robot_plots{robot_idx} = plot(Xvals(1, t_idxs), Xvals(2, t_idxs));
+    end
+
+    l = scatter(Xvals(1,problem_data.all_l_idxs), Xvals(2, problem_data.all_l_idxs), 20, 'bo');
+    for idx = 1:num_iterates
+
+        Xvals = squeeze(Xvals_rounded(idx, :, :));
+
+        for robot_idx = 1:num_robots
+            robot_plots{robot_idx}.XData = Xvals(1, robot_t_idxs{robot_idx});
+            robot_plots{robot_idx}.YData = Xvals(2, robot_t_idxs{robot_idx});
+        end
+        l.XData = Xvals(1,l_idxs);
+        l.YData = Xvals(2,l_idxs);
+        frame = getframe(fig);
+        im{idx} = frame2im(frame);
+
+        pause(0.1);
+    end
+
+    im_fpath = strrep(data_path, ".mat", "_projected_iterates.gif");
+    delay_between_frames_sec = 0.1;
+
+    for idx = 1:num_iterates
+        [A,map] = rgb2ind(im{idx},256);
+        if idx == 1
+            imwrite(A,map,im_fpath,"gif","LoopCount",Inf,"DelayTime",delay_between_frames_sec);
+        else
+            imwrite(A,map,im_fpath,"gif","WriteMode","append","DelayTime",delay_between_frames_sec);
+        end
+    end
+    fprintf("Saved gif to %s\n", im_fpath);
+end

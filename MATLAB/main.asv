@@ -1,0 +1,56 @@
+clc; clear all;
+base_data_dir = "~/data/manhattan/cert/no_loop_closures";
+base_data_dir = "~/data/hat_data/16OCT2022";
+
+manopt_opts.init = "random";
+manopt_opts.verbosity = 2;
+manopt_opts = get_manopt_opts(manopt_opts);
+
+% set init strategy and check if it is valid
+assert(manopt_opts.init == "random" || manopt_opts.init == "odom" || manopt_opts.init == "gt");
+experiments = get_experiment_filepaths_in_subdirs(base_data_dir);
+num_experiments = length(experiments);
+
+for exp_idx = 1:num_experiments
+    fprintf("Starting experiment %d of %d\n", exp_idx, num_experiments);
+    data_path = experiments(exp_idx);
+    res_path = strrep(data_path, ".mat", "_results.mat");
+    if exist(res_path, 'file')
+%         warning("Results already found for experiment %s ... skipping", data_path);
+%         continue
+    end
+    
+    exp_data = load_ra_slam_problem(data_path);
+    [X, Fval_base_dim, X_is_optimal, Xround, Fval_lifted, manopt_info, Manopt_opts] = ra_slam(exp_data, manopt_opts);
+
+    res = struct();
+
+    % values from the true final solution
+    res.X = X; % the final solution (rounded and refined)
+    res.Fval_final = Fval_base_dim; % cost of the final soln
+    res.X_is_certified = X_is_optimal;
+
+    % values from rounding the lifted solution
+    res.Xround = Xround; % the rounded solution
+
+    % values from the last lifted optimization
+    res.Xvals = manopt_info.Xvals; % iterates of final lifted optimization
+    res.Fval_lifted = Fval_lifted; % the final cost of the lifted optimization
+    res.costs = manopt_info.cost; % the cost at each iteration
+    res.time = manopt_info.time; % time elapsed at each iteration
+
+    save_experiment_results(res, data_path);
+    plot_solution(X, exp_data)
+end
+
+%%
+X_gt = exp_data.X_gt;
+l_gt = X_gt(exp_data.dim+2:end, :);
+clf;
+scatter(l_gt(:, 1), l_gt(:, 2), 10, 'blue');
+hold on;
+T = X(1:3, :)';
+R = T(1:2, 1:2);
+t = T(:, 3);
+l = R' * X(exp_data.dim+2:end, :)'  t;
+scatter(l(:, 1), l(:, 2),20, 'xr');

@@ -1,0 +1,23 @@
+clc; clear all;
+base_data_dir = "~/data/manhattan/cert/no_loop_closures";
+base_data_dir = "~/data/hat_data/16OCT2022";
+
+experiments = get_experiment_filepaths_in_subdirs(base_data_dir);
+num_experiments = length(experiments);
+
+data_path = experiments(1);
+res_path = strrep(data_path, ".mat", "_results.mat");
+solver_info_path = strrep(data_path, ".mat", "_solver_info.mat");
+
+load(res_path);
+exp_data = load_ra_slam_problem(data_path);
+
+%%
+clc; clf;
+figure(2);
+hold on;
+Xvals_rounded = round_solution(res.Xvals, problem);
+%%
+for idx = 1:length(res)
+
+end
