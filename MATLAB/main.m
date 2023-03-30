@@ -1,5 +1,6 @@
 clc; clear all; close all;
-base_data_dir = "~/data/manhattan/cert/no_loop_closures";
+% base_data_dir = "~/data/manhattan/cert/no_loop_closures";
+base_data_dir = "~/data/highbay_single_drone";
 % base_data_dir = "~/data/manhattan/cert/100loop_closures";
 % base_data_dir = "~/data/hat_data/16OCT2022";
 
@@ -50,6 +51,6 @@ for exp_idx = 1:num_experiments
 end
 
 % make a noise when done
-load handel
-sound(y(1:20000, :),Fs)
+% load handel
+% sound(y(1:20000, :),Fs)
 
