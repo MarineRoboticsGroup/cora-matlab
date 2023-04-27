@@ -1,5 +1,5 @@
 function rounded_soln = round_solution(X, problem)
-    verbose = false;
+    verbose = true;
     dim = problem.dim;
     num_poses = problem.num_poses;
 
@@ -49,6 +49,13 @@ function rounded_soln = round_solution(X, problem)
         end
         reflector = diag([ones(1, dim - 1), -1]);
         rounded_soln = reflector * rounded_soln;
+    end
+
+    %% also round the distance variables to the nearest unit vector
+    dist_idxs = problem.all_d_idxs;
+    for i = 1:length(dist_idxs)
+        dist_i = rounded_soln(:, dist_idxs(i));
+        rounded_soln(:, dist_idxs(i)) = dist_i / norm(dist_i);
     end
 
 end

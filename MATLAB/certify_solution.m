@@ -38,7 +38,7 @@ function [is_opt, cert_time] = certify_solution(problem_data, X)
 
     % set is_opt to true if we can cholesky factorize S
     % iterate from 1e-10, 1e-9, ...
-    for i = -5:-5
+    for i = -8:-8
         beta = 10^(i);
         is_opt = testPSDofMat(S, beta);
         if is_opt

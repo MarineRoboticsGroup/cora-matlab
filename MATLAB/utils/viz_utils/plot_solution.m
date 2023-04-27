@@ -69,8 +69,11 @@ function plot_solution(X, problem_data)
     xlim([vmin(1)-3, vmax(1)+3]);
     ylim([vmin(2)-3, vmax(2)+3]);
 
+    % wait for user to close the figure
+    waitfor(figure(1));
+
     % remind to still try plotting ranges between objects, etc
-    warning('You should try plotting ranges between objects, etc')
+%     warning('You should try plotting ranges between objects, etc')
 
 end
 

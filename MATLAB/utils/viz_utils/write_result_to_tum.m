@@ -1,6 +1,4 @@
-write_res_to_tum(results.X, problem_data, "~/data/highbay_single_drone")
-
-function write_res_to_tum(X, problem_data, save_dir)
+function write_result_to_tum(X, problem_data, save_dir)
 
     % if X is tall and skinny, transpose it
     if size(X, 1) > size(X, 2)
@@ -46,9 +44,15 @@ function write_res_to_tum(X, problem_data, save_dir)
             trans_i = robot_i_poses(:, trans_idxs);
             rotations_i = robot_i_poses(:, rot_idxs);
 
-            timestamp_start = (robot_idx - 1)*poses_per_robot+1;
-            timestamp_end = timestamp_start + poses_per_robot - 1;
-            robot_i_timestamps = problem_data.timestamps(timestamp_start:timestamp_end);
+            % if problem_data.timestamps exists, use it
+            % otherwise, use the default timestamps
+            if isfield(problem_data, 'timestamps')
+                timestamp_start = (robot_idx - 1)*poses_per_robot+1;
+                timestamp_end = timestamp_start + poses_per_robot - 1;
+                robot_i_timestamps = problem_data.timestamps(timestamp_start:timestamp_end);
+            else
+                robot_i_timestamps = 0:poses_per_robot-1;
+            end
             assert(length(robot_i_timestamps) == poses_per_robot);
 
             % write the poses to the file in the format:
@@ -67,12 +71,20 @@ function write_res_to_tum(X, problem_data, save_dir)
                 rot_j_start_idx = (fpath_line_idx-1)*dim+1;
                 rot_j_idxs = rot_j_start_idx:rot_j_start_idx+dim-1;
                 rot_i_j = rotations_i(:, rot_j_idxs);
+
                 % convert the rotation matrix to a quaternion
-                rot_i_j_quat = rotm2quat(rot_i_j);
-                qx = rot_i_j_quat(1);
-                qy = rot_i_j_quat(2);
-                qz = rot_i_j_quat(3);
-                qw = rot_i_j_quat(4);
+                % if rotation is 2x2, pad it with a row and column of zeros
+                if dim == 2
+                    rot_i_j_quat = rotm2quat([rot_i_j, zeros(2,1); zeros(1,3)]);
+                elseif dim == 3
+                    rot_i_j_quat = rotm2quat(rot_i_j);
+                else
+                    error('Invalid dimension: %d', dim);
+                end
+                qw = rot_i_j_quat(1);
+                qx = rot_i_j_quat(2);
+                qy = rot_i_j_quat(3);
+                qz = rot_i_j_quat(4);
 
                 % write the line to the file
                 fprintf(fid, '%f %f %f %f %f %f %f %f\n', timestamp, x, y, z, qx, qy, qz, qw);

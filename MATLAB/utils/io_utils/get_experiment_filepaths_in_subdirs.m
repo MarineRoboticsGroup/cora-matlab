@@ -13,9 +13,9 @@ function file_paths = get_experiment_filepaths_in_subdirs(search_dir)
     % throw out any directories that were found
     file_paths = file_paths(~[file_paths.isdir]);
 
-    % don't keep files that end with results.mat or solver_info.mat
+    % don't keep files that end with results.mat or _info.mat
     file_paths = file_paths(~endsWith({file_paths.name}, 'results.mat'));
-    file_paths = file_paths(~endsWith({file_paths.name}, 'solver_info.mat'));
+    file_paths = file_paths(~endsWith({file_paths.name}, '_info.mat'));
 
     % get the full path of each file as a string
     file_paths = string({file_paths.folder}) + "/" + string({file_paths.name});
