@@ -45,8 +45,9 @@ else
         rel_change_in_val = (previous_val - current_val) / previous_val;
         if rel_change_in_val < rel_func_decrease_tol
             stop = 6;
-            reason = 'relative decrease in function below tolerance';
-            fprintf('Stopping due to relative decrease in function below tolerance: %e < %e\n', rel_change_in_val, rel_func_decrease_tol);
+            % reason = 'relative decrease in function below tolerance';
+            % fprintf('Stopping due to relative decrease in function below tolerance: %e < %e\n', rel_change_in_val, rel_func_decrease_tol);
+            reason = sprintf('relative decrease in function below tolerance: %e < %e', rel_change_in_val, rel_func_decrease_tol);
         else
             stop = 0;
         end

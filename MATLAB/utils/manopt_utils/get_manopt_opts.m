@@ -32,7 +32,7 @@ function Manopt_opts = get_manopt_opts(Manopt_opts)
     if isfield(Manopt_opts, 'rel_func_tol')
         fprintf(' Stopping tolerance for relative function decrease: %g\n', Manopt_opts.rel_func_tol);
     else
-        Manopt_opts.rel_func_tol = 1e-7;
+        Manopt_opts.rel_func_tol = 1e-5;
         fprintf(' Setting stopping tolerance for relative function decrease to: %g [default]\n', Manopt_opts.rel_func_tol);
     end
 
@@ -53,7 +53,7 @@ function Manopt_opts = get_manopt_opts(Manopt_opts)
     if isfield(Manopt_opts, 'maxiter')
         fprintf(' Maximum number of trust-region iterations: %d\n', Manopt_opts.maxiter);
     else
-        Manopt_opts.maxiter = 500;
+        Manopt_opts.maxiter = 300;
         fprintf(' Setting maximum number of trust-region iterations to: %d [default]\n', Manopt_opts.maxiter);
     end
 
