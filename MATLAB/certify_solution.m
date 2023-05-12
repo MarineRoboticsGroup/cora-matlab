@@ -1,5 +1,7 @@
-function [is_opt, cert_time] = certify_solution(problem_data, X)
-    tic
+function [is_opt, cert_time] = certify_solution(problem_data, X, verbose)
+    if verbose
+        tic
+    end
 
     % set up the problem
     stacked_constraints = problem_data.stacked_constraints;
@@ -42,15 +44,19 @@ function [is_opt, cert_time] = certify_solution(problem_data, X)
         beta = 10^(i);
         is_opt = testPSDofMat(S, beta);
         if is_opt
-            fprintf("Solution certified with beta = %d \n", beta);
+            if verbose
+                fprintf("Solution certified with beta = %d \n", beta);
+            end
             break
         end
     end
-    if ~is_opt
+    if ~is_opt && verbose
         fprintf("Not certified after beta of %d \n", beta);
     end
-    cert_time = toc;
-    fprintf("Certification took %f seconds \n", cert_time);
+    if verbose
+        cert_time = toc;
+        fprintf("Certification took %f seconds \n", cert_time);
+    end
 end
 
 function isPSD = testPSDofMat(mat, reg_term)

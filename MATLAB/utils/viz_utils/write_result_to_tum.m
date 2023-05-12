@@ -88,13 +88,12 @@ function write_result_to_tum(X, problem_data, save_dir)
 
                 % write the line to the file
                 fprintf(fid, '%f %f %f %f %f %f %f %f\n', timestamp, x, y, z, qx, qy, qz, qw);
-                % fprintf(fid, '%f %f %f %f %f %f %f\n', x, y, z, qx, qy, qz, qw);
 
             end
 
             % close the file
             fclose(fid);
-            fprintf('Saved robot poses to %s\n', save_fpaths(robot_idx));
+            % fprintf('Saved robot poses to %s\n', save_fpaths(robot_idx));
         end
     end
 

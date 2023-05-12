@@ -55,8 +55,6 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
         % estimate a higher rank point
         if add_noise
             lifted_init = lifted_init + 1e-3 * rand(size(lifted_init));
-        else
-            warning('Not adding noise to lifted initialization. This may cause problems if rank(lifted_init) < lifted_dim');
         end
     end
 
@@ -74,6 +72,8 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     end
 
     % print info on problem.M
-    fprintf("Refining solution over manifold is %s\n", problem.M.name());
+    if Manopt_opts.verbosity > 0
+        fprintf("Refining solution over manifold %s\n", problem.M.name());
+    end
     [Xlift, Fval, manopt_info, Manopt_opts] = manoptsolve(problem, X0, Manopt_opts);
 end

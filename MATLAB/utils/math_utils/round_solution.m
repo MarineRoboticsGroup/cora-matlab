@@ -1,5 +1,4 @@
-function rounded_soln = round_solution(X, problem)
-    verbose = true;
+function rounded_soln = round_solution(X, problem, verbosity)
     dim = problem.dim;
     num_poses = problem.num_poses;
 
@@ -32,19 +31,19 @@ function rounded_soln = round_solution(X, problem)
     end
 
     num_good_rotations = sum(abs(determinants - 1) < 1e-2);
-    if verbose
+    if verbosity > 0
         fprintf('Number of good rotations: %d / %d\n',...
             num_good_rotations, num_poses);
     end
 
     if num_good_rotations == 0
-        if verbose
+        if verbosity > 0
             fprintf('All rotations were left handed, flipping them!\n');
         end
         reflector = diag([ones(1, dim - 1), -1]);
         rounded_soln = reflector * rounded_soln;
     elseif num_good_rotations < num_poses / 2
-        if verbose
+        if verbosity > 0
             fprintf('Majority of rotations were left handed, flipping them!\n');
         end
         reflector = diag([ones(1, dim - 1), -1]);

@@ -14,8 +14,9 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
     for idx = 1:num_iterates
         % for each iterate, we want to round the solution to SE(d) and
         % align it such that the first pose is at the origin
+        verbosity = 0;
         Xvals_rounded(idx, :, :) = align_solution_by_first_pose(...
-            round_solution(cora_iterates_info(idx).Xvals',problem_data), problem_data...
+            round_solution(cora_iterates_info(idx).Xvals',problem_data, verbosity), problem_data...
         );
     end
 

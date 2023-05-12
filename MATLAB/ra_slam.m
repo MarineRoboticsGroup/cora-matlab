@@ -49,7 +49,7 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
 
     % if we know there are no loop closures and we're randomly initializing then
     % let's skip a few dimensions higher (from experience)
-    lifted_dim = base_dim + 20; % start out by lifting some dimensions
+    lifted_dim = base_dim + 2; % start out by lifting some dimensions
     if isfield(problem, 'num_loop_closures')
         if problem.num_loop_closures == 0 && isempty(init_point)
                 lifted_dim = base_dim + 3;
@@ -65,18 +65,19 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
     soln_is_optimal = false;
     while ~soln_is_optimal
         % solve the lifted problem and try to certify it
-        warning("Trying to solve at rank %d \n", lifted_dim);
+        fprintf("Trying to solve at rank %d\n", lifted_dim);
 %         check_value_is_valid(problem, init_point);
         perturb_lifted_init = true;
         [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts,perturb_lifted_init);
-        soln_is_optimal = certify_solution(problem, Xlift);
+        soln_is_optimal = certify_solution(problem, Xlift, Manopt_opts.verbosity);
 
         % add all of the new Xvals from manopt_info to cora_iterates_info but do not
         % add anything else from manopt_info
         cora_iterates_info = [cora_iterates_info, manopt_info];
 
-        if do_not_lift || lifted_dim > 10
-            warning("Exiting without finding optimal solution - either do_not_lift is true or lifted_dim > 10");
+        max_lifted_dim = 20;
+        if do_not_lift || lifted_dim > max_lifted_dim
+            warning("Exiting without finding optimal solution - either do_not_lift is true or lifted_dim > max_lifted_dim");
             soln_is_optimal = 1;
         end
 
@@ -88,13 +89,15 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
     end
 
     fprintf("The staircase algorithm has found an optimal solution with dimension %d.\n", lifted_dim);
+    fprintf("Singular values of lifted solution are: %s \n", mat2str(svd(Xlift)));
 
     % print the rank, singular values, and cost of the solution
-    fprintf("Lifted solution has rank %d\n", rank(Xlift));
-    fprintf("Singular values of lifted solution are: %s \n", mat2str(svd(Xlift)));
-    fprintf("Cost of lifted solution is %f\n", Fval_lifted);
+    if Manopt_opts.verbosity > 0
+        fprintf("Lifted solution has rank %d\n", rank(Xlift));
+        fprintf("Cost of lifted solution is %f\n", Fval_lifted);
+    end
 
-    Xround = round_solution(Xlift, problem);
+    Xround = round_solution(Xlift, problem, Manopt_opts.verbosity);
 
     % refine the rounded solution with one last optimization
     check_value_is_valid(problem, Xround);
@@ -103,16 +106,24 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
     cora_iterates_info = [cora_iterates_info, soln_manopt_info];
 
     % print the rank, singular values, and cost of the solution
-    fprintf("Refined solution has rank %d\n", rank(X));
-    fprintf("Singular values of refined solution are: %s \n", mat2str(svd(X)));
-    fprintf("Cost of refined solution is %f\n", Fval_base_dim);
+    if Manopt_opts.verbosity > 0
+        fprintf("Refined solution has rank %d\n", rank(X));
+        fprintf("Cost of refined solution is %f\n", Fval_base_dim);
+    end
 
 
     % print if the final solution is optimal
-    final_soln_optimal = certify_solution(problem, X);
-    fprintf("Final solution is optimal: %d\n", final_soln_optimal);
+    final_soln_optimal = certify_solution(problem, X, Manopt_opts.verbosity);
+    fprintf("Singular values of refined solution are: %s \n", mat2str(svd(X)));
 
-    % print the gap between the final solution and the optimal solution
-    fprintf("Gap between final solution and optimal solution is %f\n", Fval_base_dim - Fval_lifted);
+    if final_soln_optimal
+        warning("Final solution is optimal");
+    else
+        % print the gap between the final solution and the optimal solution
+        gap = Fval_base_dim - Fval_lifted;
+        rel_suboptimality = gap / Fval_base_dim;
+        warning("Gap between final solution and optimal solution is %f", gap);
+        warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
+    end
 
 end
