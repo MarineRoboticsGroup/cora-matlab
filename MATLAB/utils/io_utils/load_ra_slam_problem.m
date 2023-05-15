@@ -5,6 +5,8 @@ function problem = load_ra_slam_problem(mats_filepath)
     % num_ranges = problem.num_range_measurements;
     % dim = problem.dim;
 
+    fprintf('Loading problem from %s\n', mats_filepath)
+
     problem = struct();
 
     % load the data from the file

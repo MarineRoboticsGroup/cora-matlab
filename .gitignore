@@ -9,6 +9,9 @@ ehthumbs.db
 [Tt]humbs.db
 
 # matlab
+help
+data/*
+diary
 MATLAB/*.mat
 
 # mypy
