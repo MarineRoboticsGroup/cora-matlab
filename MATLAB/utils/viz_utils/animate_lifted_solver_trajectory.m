@@ -11,6 +11,12 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
     Xvals_rounded = zeros(num_iterates, num_rows, num_cols);
 
     gt_vals = align_solution_by_first_pose(problem_data.X_gt', problem_data);
+    % the Plaza2 data needs to be flipped 180 degrees to visualize properly
+    % rot_angle_rad = deg2rad(180);
+    % full_rot = [cos(rot_angle_rad), -sin(rot_angle_rad);
+    %             sin(rot_angle_rad), cos(rot_angle_rad)];
+    % gt_vals = full_rot* gt_vals;
+
     for idx = 1:num_iterates
         % for each iterate, we want to round the solution to SE(d) and
         % align it such that the first pose is at the origin

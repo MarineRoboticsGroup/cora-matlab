@@ -1,15 +1,18 @@
 clc; clear all; close all;
 % base_data_dir = "~/data/manhattan/cert/";
-base_data_dir = "~/data/highbay_single_drone";
+% base_data_dir = "~/data/highbay_single_drone";
 % base_data_dir = "~/data/manhattan/cert/100loop_closures";
 % base_data_dir = "~/data/hat_data/16OCT2022";
+base_data_dir = "~/experimental_data/plaza/Plaza1";
 
-manopt_opts.init = "gt";
+manopt_opts.init = "random";
 manopt_opts.verbosity = 2;
 manopt_opts.debug = 0;
 manopt_opts = get_manopt_opts(manopt_opts);
 do_not_lift = false; % whether or not to perform lifting (e.g. vanilla solve vs CORA)
 animation_show_gt = true;
+plot_show_gt = true;
+look_for_cached_soln = true;
 
 % set init strategy and check if it is valid
 assert(manopt_opts.init == "random" || manopt_opts.init == "odom" || manopt_opts.init == "gt");
@@ -24,15 +27,15 @@ for exp_idx = 1:num_experiments
     data_dir = fileparts(data_path);
     exp_data = load_ra_slam_problem(data_path);
 
-    if exist(res_path, 'file') && exist(cora_iterates_info_path, 'file') && false
+    if look_for_cached_soln && exist(res_path, 'file') && exist(cora_iterates_info_path, 'file')
         warning("Results already found for experiment %s ... skipping", data_path);
 
         % write the obtained result to .tum format for comparison
         res = load(res_path);
         X = res.results.X;
-%         write_result_to_tum(X, exp_data, data_dir)
-        plot_solution(X, exp_data);
-%         animate_lifted_solver_trajectory(data_path, animation_show_gt);
+        write_result_to_tum(X, exp_data, data_dir)
+        plot_solution(X, exp_data, plot_show_gt);
+        animate_lifted_solver_trajectory(data_path, animation_show_gt);
         continue
     end
 
@@ -44,12 +47,12 @@ for exp_idx = 1:num_experiments
     res.X_is_certified = X_is_optimal;
 
     save_experiment_results(res, cora_iterates_info, data_path);
-    % plot_solution(X, exp_data)
-    
-    % write the obtained result to .tum format for comparison
-    write_result_to_tum(X, exp_data, data_dir)
+    plot_solution(X, exp_data, plot_show_gt);
 
-%     animate_lifted_solver_trajectory(data_path, animation_show_gt);
+    % write the obtained result to .tum format for comparison
+    write_result_to_tum(X, exp_data, data_dir);
+
+    animate_lifted_solver_trajectory(data_path, animation_show_gt);
 end
 
 % make a noise when done
