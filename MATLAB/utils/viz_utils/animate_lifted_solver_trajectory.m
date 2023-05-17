@@ -12,6 +12,7 @@ function animate_lifted_solver_trajectory(data_path, show_gt, flip_gt)
     Xvals_rounded = zeros(num_iterates, num_rows, num_cols);
 
     gt_vals = align_solution_by_first_pose(problem_data.X_gt', problem_data);
+    gt_color = [0.5, 0.5, 0.5];
     % the Plaza2 data needs to be flipped 180 degrees to visualize properly
     % if flip_gt is not provided, default to false
     if ~exist('flip_gt', 'var')
@@ -77,24 +78,30 @@ function animate_lifted_solver_trajectory(data_path, show_gt, flip_gt)
     fprintf('Generating all of the plots for the robot trajectories\n')
     robot_plots = cell(num_robots, 1);
     robot_t_idxs = cell(num_robots, 1);
+    % get a different color for each robot
+    colors = lines(num_robots);
     for robot_idx = 1:num_robots
         robot_t_idxs{robot_idx} = get_robot_t_idxs(problem_data, robot_idx);
-        robot_plots{robot_idx} = plot(Xvals(1, robot_t_idxs{robot_idx}), Xvals(2, robot_t_idxs{robot_idx}));
         if show_gt
-            plot(gt_vals(1, robot_t_idxs{robot_idx}), gt_vals(2, robot_t_idxs{robot_idx}));
+            % plot gt trajectory as black dashed line with line width 1
+            plot(gt_vals(1, robot_t_idxs{robot_idx}), gt_vals(2, robot_t_idxs{robot_idx}), '-', 'Color', gt_color, 'LineWidth', 1);
         end
+        robot_plots{robot_idx} = plot(Xvals(1, robot_t_idxs{robot_idx}), Xvals(2, robot_t_idxs{robot_idx}), 'Color', colors(robot_idx, :));
     end
 
     % make all of the landmark plot objects
     fprintf('Generating all of the plots for the landmarks\n')
-    l = scatter(Xvals(1,problem_data.all_l_idxs), Xvals(2, problem_data.all_l_idxs), 30, 'bo', "LineWidth", 2);
     if show_gt
-        scatter(gt_vals(1, l_idxs), gt_vals(2, l_idxs), 30, 'rx', "LineWidth", 2);
+        % plot gt_vals as grey x's
+        scatter(gt_vals(1, l_idxs), gt_vals(2, l_idxs), 30, 'x', 'MarkerEdgeColor', gt_color, 'LineWidth', 2);
     end
+    l = scatter(Xvals(1,problem_data.all_l_idxs), Xvals(2, problem_data.all_l_idxs), 30, 'bo', "LineWidth", 2);
 
     % set a legend if we are showing the ground truth
     if show_gt
-        legend("estimate", "ground truth", "estimate", "ground truth");
+        gt_name = "ground truth";
+        est_name = "estimate";
+        legend(gt_name, est_name, gt_name, est_name);
     end
 
     % run over the iterates and show all of the plot
