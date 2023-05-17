@@ -15,11 +15,10 @@ for you to try out.
 Here is CORA in action on the Plaza1 and Plaza2 experiments from the
 [CMU Navigating with Ranging Radios Dataset](https://infoscience.epfl.ch/record/283435)
 
-<!-- make these two GIFs side-by-side and equal in size -->
-<div style="display: flex; flex-wrap; nowrap;">
-  <img src="media/pz1_grey_solid_inf_loop.gif" alt="GIF 1" style="flex: 1; width: 50%; margin-right: 10px;" />
-  <img src="media/pz2_grey_solid_inf_loop.gif" alt="GIF 2" style="flex: 1; width: 50%; margin-left: 10px;" />
-</div>
+| Plaza2                                                | Plaza2                                        |
+| ----------------------------------------------------- | --------------------------------------------- |
+| ![Plaza2](media/pz1_grey_solid_inf_loop.gif) | ![Plaza2](media/pz2_grey_solid_inf_loop.gif) |
+
 
 ## Feedback, Support, and Contributions
 
