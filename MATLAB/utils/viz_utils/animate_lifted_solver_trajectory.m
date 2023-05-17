@@ -1,6 +1,7 @@
-function animate_lifted_solver_trajectory(data_path, show_gt)
+function animate_lifted_solver_trajectory(data_path, show_gt, flip_gt)
     res_path = strrep(data_path, ".mat", "_results.mat");
     cora_iterates_info_path = strrep(data_path, '.mat', '_cora_iterates_info.mat');
+
 
     problem_data = load_ra_slam_problem(data_path);
     load(res_path);
@@ -12,10 +13,16 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
 
     gt_vals = align_solution_by_first_pose(problem_data.X_gt', problem_data);
     % the Plaza2 data needs to be flipped 180 degrees to visualize properly
-    % rot_angle_rad = deg2rad(180);
-    % full_rot = [cos(rot_angle_rad), -sin(rot_angle_rad);
-    %             sin(rot_angle_rad), cos(rot_angle_rad)];
-    % gt_vals = full_rot* gt_vals;
+    % if flip_gt is not provided, default to false
+    if ~exist('flip_gt', 'var')
+        flip_gt = false;
+    end
+    if flip_gt
+        rot_angle_rad = deg2rad(180);
+        full_rot = [cos(rot_angle_rad), -sin(rot_angle_rad);
+                    sin(rot_angle_rad), cos(rot_angle_rad)];
+        gt_vals = full_rot* gt_vals;
+    end
 
     for idx = 1:num_iterates
         % for each iterate, we want to round the solution to SE(d) and
@@ -50,6 +57,8 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
 
     fig = clf(figure(2));
     hold on;
+
+    % set linewidth and marker size
     set(fig, 'DefaultLineLineWidth', 2);
 
     % set axis limits
@@ -78,9 +87,9 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
 
     % make all of the landmark plot objects
     fprintf('Generating all of the plots for the landmarks\n')
-    l = scatter(Xvals(1,problem_data.all_l_idxs), Xvals(2, problem_data.all_l_idxs), 20, 'bo');
+    l = scatter(Xvals(1,problem_data.all_l_idxs), Xvals(2, problem_data.all_l_idxs), 30, 'bo', "LineWidth", 2);
     if show_gt
-        scatter(gt_vals(1, l_idxs), gt_vals(2, l_idxs), 20, 'rx');
+        scatter(gt_vals(1, l_idxs), gt_vals(2, l_idxs), 30, 'rx', "LineWidth", 2);
     end
 
     % set a legend if we are showing the ground truth
@@ -93,7 +102,8 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
     gif_fpath = strrep(data_path, ".mat", "_projected_iterates.gif");
     gif_already_exists = exist(gif_fpath, 'file');
     make_new_gif = ~gif_already_exists;
-    make_new_gif = true;
+    make_new_gif = false;
+    save_images = true;
     % if the gif exists ask the user if they want to overwrite it
 %     if gif_already_exists
 %         overwrite = input(sprintf("%s already exists. Overwrite? (y/n): ", gif_fpath), 's');
@@ -116,6 +126,27 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
         l.XData = Xvals(1,l_idxs);
         l.YData = Xvals(2,l_idxs);
         frame = getframe(fig);
+
+        if save_images
+            img_dir = strrep(data_path, ".mat", "_projected_iterates");
+            if ~exist(img_dir, 'dir')
+                mkdir(img_dir);
+            end
+
+            % make img path, with idx padded to 4 digits
+            img_path = fullfile(img_dir, sprintf('img_%04d.png', idx));
+
+            % write the image to file with a high resolution
+            resolution = 600;
+            exportgraphics(fig, img_path, "Resolution", resolution);
+
+            % save the image with a high dpi
+            % print(fig, img_path, '-dpng', '-r300');
+            % print(fig, img_path, '-dpng', '-r600');
+
+            fprintf('Saved image to %s\n', img_path);
+        end
+
         if make_new_gif
             im{idx} = frame2im(frame);
         end
@@ -125,7 +156,7 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
         delay_between_frames_sec = 0.01;
         fprintf('Saving gif to %s\n', gif_fpath);
         for idx = 1:num_iterates
-            [A,map] = rgb2ind(im{idx},256);
+            [A,map] = rgb2ind(im{idx},128);
             if idx == 1
                 imwrite(A,map,gif_fpath,"gif","LoopCount",Inf,"DelayTime",delay_between_frames_sec);
             else

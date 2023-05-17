@@ -5,6 +5,14 @@ clc; clear all; close all;
 % base_data_dir = "~/data/hat_data/16OCT2022";
 base_data_dir = "~/experimental_data/plaza/Plaza1";
 
+% if base_data_dir ends with Plaza2, then flip_gt = true. Just some weirdness
+% with the start of the dataset
+if endsWith(base_data_dir, "Plaza2")
+    flip_gt = true;
+else
+    flip_gt = false;
+end
+
 manopt_opts.init = "random";
 manopt_opts.verbosity = 2;
 manopt_opts.debug = 0;
@@ -34,8 +42,8 @@ for exp_idx = 1:num_experiments
         res = load(res_path);
         X = res.results.X;
         write_result_to_tum(X, exp_data, data_dir)
-        plot_solution(X, exp_data, plot_show_gt);
-        animate_lifted_solver_trajectory(data_path, animation_show_gt);
+        plot_solution(X, exp_data, plot_show_gt, flip_gt);
+        animate_lifted_solver_trajectory(data_path, animation_show_gt, flip_gt);
         continue
     end
 
@@ -46,16 +54,11 @@ for exp_idx = 1:num_experiments
     res.X = X; % the final solution (rounded and refined)
     res.X_is_certified = X_is_optimal;
 
+    % save the results and write to .tum format for comparison
     save_experiment_results(res, cora_iterates_info, data_path);
-    plot_solution(X, exp_data, plot_show_gt);
-
-    % write the obtained result to .tum format for comparison
     write_result_to_tum(X, exp_data, data_dir);
 
-    animate_lifted_solver_trajectory(data_path, animation_show_gt);
+    % visualize the solution
+    plot_solution(X, exp_data, plot_show_gt, flip_gt);
+    animate_lifted_solver_trajectory(data_path, animation_show_gt, flip_gt);
 end
-
-% make a noise when done
-% load handel
-% sound(y(1:20000, :),Fs)
-

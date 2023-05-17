@@ -1,4 +1,4 @@
-function plot_solution(X, problem_data, show_gt)
+function plot_solution(X, problem_data, show_gt, flip_gt)
 
 % make sure that the height of X is dim
 dim = problem_data.dim;
@@ -11,10 +11,15 @@ assert(size(X, 1) == dim);
 if show_gt
     gt_vals = align_solution_by_first_pose(problem_data.X_gt', problem_data);
     % the Plaza2 data needs to be rotated 180 degrees to visualize properly
-    % rot_angle_rad = deg2rad(180);
-    % full_rot = [cos(rot_angle_rad), -sin(rot_angle_rad);
-    %             sin(rot_angle_rad), cos(rot_angle_rad)];
-    % gt_vals = full_rot* gt_vals;
+    if ~exist('flip_gt', 'var')
+        flip_gt = false;
+    end
+    if flip_gt
+        rot_angle_rad = deg2rad(180);
+        full_rot = [cos(rot_angle_rad), -sin(rot_angle_rad);
+                    sin(rot_angle_rad), cos(rot_angle_rad)];
+        gt_vals = full_rot* gt_vals;
+    end
 end
 Xvals = align_solution_by_first_pose(X, problem_data);
 
