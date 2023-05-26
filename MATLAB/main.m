@@ -5,7 +5,6 @@ manopt_opts.init = "random";
 manopt_opts.verbosity = 2;
 manopt_opts.debug = 0;
 manopt_opts = get_manopt_opts(manopt_opts);
-do_not_lift = false; % whether or not to perform lifting (e.g. vanilla solve vs CORA)
 animation_show_gt = true;
 plot_show_gt = true;
 look_for_cached_soln = true;
