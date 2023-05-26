@@ -34,7 +34,7 @@ for exp_idx = 1:num_experiments
         continue
     end
 
-    [X, X_is_optimal, cora_iterates_info, Manopt_opts] = ra_slam(exp_data, manopt_opts, do_not_lift);
+    [X, X_is_optimal, cora_iterates_info, Manopt_opts] = cora(exp_data, manopt_opts);
     res = struct();
 
     % values from the true final solution
