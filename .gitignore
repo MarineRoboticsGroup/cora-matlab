@@ -1,3 +1,13 @@
+# matlab
+help
+data/*
+diary
+MATLAB/*.mat
+*.asv
+main.m
+
+
+
 # OS generated files #
 ######################
 .DS_Store
@@ -7,13 +17,6 @@
 .Trashes
 ehthumbs.db
 [Tt]humbs.db
-
-# matlab
-help
-data/*
-diary
-MATLAB/*.mat
-*.asv
 
 # mypy
 *.sqlite3
