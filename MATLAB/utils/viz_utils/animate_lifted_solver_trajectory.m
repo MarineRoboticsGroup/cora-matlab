@@ -81,7 +81,6 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
             % plot gt trajectory as black dashed line with line width 1
             plot(gt_vals(1, robot_t_idxs{robot_idx}), gt_vals(2, robot_t_idxs{robot_idx}), '-', 'Color', gt_color, 'LineWidth', 1);
         end
-        % robot_plots{robot_idx} = plot(Xvals(1, robot_t_idxs{robot_idx}), Xvals(2, robot_t_idxs{robot_idx}), 'Color', "green");
         robot_plots{robot_idx} = plot(Xvals(1, robot_t_idxs{robot_idx}), Xvals(2, robot_t_idxs{robot_idx}), 'Color', colors(robot_idx, :));
     end
 
