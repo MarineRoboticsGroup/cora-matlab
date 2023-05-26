@@ -1,17 +1,5 @@
 clc; clear all; close all;
-% base_data_dir = "~/data/manhattan/cert/";
-% base_data_dir = "~/data/highbay_single_drone";
-% base_data_dir = "~/data/manhattan/cert/100loop_closures";
-% base_data_dir = "~/data/hat_data/16OCT2022";
-base_data_dir = "~/experimental_data/plaza/Plaza1";
-
-% if base_data_dir ends with Plaza2, then flip_gt = true. Just some weirdness
-% with the start of the dataset
-if endsWith(base_data_dir, "Plaza2")
-    flip_gt = true;
-else
-    flip_gt = false;
-end
+base_data_dir = "~/experimental_data/plaza/Plaza2";
 
 manopt_opts.init = "random";
 manopt_opts.verbosity = 2;
@@ -42,8 +30,7 @@ for exp_idx = 1:num_experiments
         res = load(res_path);
         X = res.results.X;
         write_result_to_tum(X, exp_data, data_dir)
-        plot_solution(X, exp_data, plot_show_gt, flip_gt);
-        animate_lifted_solver_trajectory(data_path, animation_show_gt, flip_gt);
+        animate_lifted_solver_trajectory(data_path, animation_show_gt);
         continue
     end
 
@@ -59,6 +46,5 @@ for exp_idx = 1:num_experiments
     write_result_to_tum(X, exp_data, data_dir);
 
     % visualize the solution
-    plot_solution(X, exp_data, plot_show_gt, flip_gt);
-    animate_lifted_solver_trajectory(data_path, animation_show_gt, flip_gt);
+    animate_lifted_solver_trajectory(data_path, animation_show_gt);
 end
