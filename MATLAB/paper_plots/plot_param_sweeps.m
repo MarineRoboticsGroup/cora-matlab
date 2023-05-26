@@ -1,8 +1,8 @@
 clc; clear all; close all;
 
 % whether loop closures or not
-no_loop_base_data_dir = "~/data/manhattan/cert/no_loop_closures/";
-yes_loop_base_data_dir = "~/data/manhattan/cert/100loop_closures/";
+no_loop_base_data_dir = "~/data/manhattan/cert/no_loop_closures/"; %! set by user
+yes_loop_base_data_dir = "~/data/manhattan/cert/100loop_closures/"; %! set by user
 data_dir_options = [no_loop_base_data_dir, yes_loop_base_data_dir];
 num_data_dirs = length(data_dir_options);
 
@@ -11,7 +11,7 @@ sweep_options = ["sweep_num_poses", "sweep_num_ranges",  "sweep_num_robots",  "s
 num_options = length(sweep_options);
 
 % where to save the figure to
-repo_fig_base_dir = "~/rss23-ra-slam-certification/figures/data_analysis/";
+repo_fig_base_dir = "~/rss23-ra-slam-certification/figures/data_analysis/"; %! set by user
 save_data_dir = repo_fig_base_dir;
 
 
@@ -37,7 +37,6 @@ for data_dir_idx = 1:num_data_dirs
             param_name = "# robots";
         elseif sweep_opt == "sweep_range_cov"
             param = get_range_covs_from_fpath_names(results_fpaths_pairs);
-            % this param name should be sigma^2 in the fancy latex notation
             param_name = "\sigma_{ij}^2";
         end
 
