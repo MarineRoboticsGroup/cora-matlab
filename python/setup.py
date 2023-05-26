@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ra_cert"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "pycora"))
 
 from setuptools import setup
 

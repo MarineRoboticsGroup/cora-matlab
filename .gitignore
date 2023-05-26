@@ -6,8 +6,6 @@ MATLAB/*.mat
 *.asv
 main.m
 
-
-
 # OS generated files #
 ######################
 .DS_Store
