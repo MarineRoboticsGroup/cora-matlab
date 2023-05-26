@@ -4,7 +4,7 @@ data/*
 diary
 MATLAB/*.mat
 *.asv
-main.m
+cora_main.m
 
 # OS generated files #
 ######################
