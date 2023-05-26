@@ -13,6 +13,7 @@ help
 data/*
 diary
 MATLAB/*.mat
+*.asv
 
 # mypy
 *.sqlite3

@@ -15,8 +15,8 @@ for you to try out.
 Here is CORA in action on the Plaza1 and Plaza2 experiments from the
 [CMU Navigating with Ranging Radios Dataset](https://infoscience.epfl.ch/record/283435)
 
-| Plaza2                                                | Plaza2                                        |
-| ----------------------------------------------------- | --------------------------------------------- |
+| Plaza2      | Plaza2     |
+| ------------| -----------|
 | ![Plaza2](media/pz1_grey_solid_inf_loop.gif) | ![Plaza2](media/pz2_grey_solid_inf_loop.gif) |
 
 
