@@ -4,7 +4,7 @@ This is the official repository for the paper ["Certifiably Correct Range-Aided 
 [Alan Papalia](https://alanpapalia.github.io), Andrew Fishberg, Brendan O'Neill, [Jonathan P. How](https://www.mit.edu/~jhow/),
 [David M. Rosen](https://david-m-rosen.github.io/) and [John J. Leonard](https://meche.mit.edu/people/faculty/JLEONARD@MIT.EDU).
 
-For now we provide a simple MATLAB implementation, primarily as a demo piece for extension and comparison.
+For now we provide a simple MATLAB implementation build on [manopt](https://www.manopt.org/), primarily as a demo piece for extension and comparison.
 
 To see how CORA works and play around with various things, please look at the
 file `MATLAB/main.m`. We have several example data files stored in `data/MATLAB`
@@ -24,6 +24,6 @@ Here is CORA in action on the Plaza1 and Plaza2 experiments from the
 
 Any feedback, issues, or contributions are welcome and encouraged! We'll do the best we can to provide support for hopeful users.
 
-Python and C++ implementations are hopeful future contributions. Please reach out if you are interested in contributing!
+Python and C++ implementations are hopeful future contributions. Please reach out if you are interested in contributing or have use for one of these, as it may affect how we prioritize the development!
 
 Enjoy!
