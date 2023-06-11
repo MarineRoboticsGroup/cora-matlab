@@ -4,7 +4,7 @@
         problem_fpath, animation_show_gt, look_for_cached_soln, nargout=0
     )
 %}
-function cora_python_interface(problem_fpath, animation_show_gt, look_for_cached_soln)
+function cora_python_interface(problem_fpath, show_animation, animation_show_gt, look_for_cached_soln)
 
     data_path = problem_fpath;
     res_path = strrep(data_path, ".mat", "_results.mat");
@@ -17,7 +17,9 @@ function cora_python_interface(problem_fpath, animation_show_gt, look_for_cached
         res = load(res_path);
         X = res.results.X;
         write_result_to_tum(X, exp_data, data_dir)
-        animate_lifted_solver_trajectory(data_path, animation_show_gt);
+        if show_animation
+            animate_lifted_solver_trajectory(data_path, animation_show_gt);
+        end
         return
     end
 
@@ -39,7 +41,10 @@ function cora_python_interface(problem_fpath, animation_show_gt, look_for_cached
 
     % save the results and write to .tum format for comparison
     save_experiment_results(res, cora_iterates_info, data_path);
+    write_result_to_tum(X, exp_data, data_dir)
 
     % visualize the solution
-    animate_lifted_solver_trajectory(data_path, animation_show_gt);
+    if show_animation
+        animate_lifted_solver_trajectory(data_path, animation_show_gt);
+    end
 end
