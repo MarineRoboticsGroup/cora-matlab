@@ -1,12 +1,11 @@
 function is_valid = check_value_is_valid(problem, X)
     % innocent until proven guilty
     is_valid = true;
-    
+
     % if X is tall and skinny, transpose it
     if size(X, 1) > size(X, 2)
         X = X';
     end
-
 
     % for each pose, check if the rotation is valid (i.e., R.T * R = I and
     % det(R) = 1)

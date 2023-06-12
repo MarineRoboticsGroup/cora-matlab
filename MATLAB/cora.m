@@ -1,8 +1,8 @@
-function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(problem, Manopt_opts, do_not_lift)
+function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem, Manopt_opts)
 
     % assert that 2 args are given
     if nargin < 2
-        error('ra_slam requires 2 arguments: problem and Manopt_opts');
+        error('requires 2 arguments: problem and Manopt_opts');
     end
 
 
@@ -49,16 +49,11 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
 
     % if we know there are no loop closures and we're randomly initializing then
     % let's skip a few dimensions higher (from experience)
-    lifted_dim = base_dim + 2; % start out by lifting some dimensions
+    lifted_dim = base_dim + 4; % start out by lifting some dimensions
     if isfield(problem, 'num_loop_closures')
         if problem.num_loop_closures == 0 && isempty(init_point)
                 lifted_dim = base_dim + 3;
         end
-    end
-
-    if do_not_lift
-        warning("do_not_lift == true, just solving problem at base_dim");
-        lifted_dim = base_dim;
     end
 
     cora_iterates_info = [];
@@ -76,8 +71,8 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
         cora_iterates_info = [cora_iterates_info, manopt_info];
 
         max_lifted_dim = 20;
-        if do_not_lift || lifted_dim > max_lifted_dim
-            warning("Exiting without finding optimal solution - either do_not_lift is true or lifted_dim > max_lifted_dim");
+        if lifted_dim > max_lifted_dim
+            warning("Exiting without finding optimal solution - lifted_dim > max_lifted_dim");
             soln_is_optimal = 1;
         end
 
@@ -100,7 +95,6 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
     Xround = round_solution(Xlift, problem, Manopt_opts.verbosity);
 
     % refine the rounded solution with one last optimization
-    check_value_is_valid(problem, Xround);
     perturb_lifted_init = false;
     [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, perturb_lifted_init);
     cora_iterates_info = [cora_iterates_info, soln_manopt_info];
@@ -110,7 +104,6 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = ra_slam(prob
         fprintf("Refined solution has rank %d\n", rank(X));
         fprintf("Cost of refined solution is %f\n", Fval_base_dim);
     end
-
 
     % print if the final solution is optimal
     final_soln_optimal = certify_solution(problem, X, Manopt_opts.verbosity);
