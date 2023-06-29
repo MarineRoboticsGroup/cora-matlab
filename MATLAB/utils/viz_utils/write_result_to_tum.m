@@ -28,7 +28,7 @@ function write_result_to_tum(X, problem_data, save_dir)
         rot_idxs = problem_data.all_R_idxs(1:num_rot_idxs_per_robot);
 
         % make a list of the paths to save to, numbered by robot
-        save_fpaths = save_dir + "/robot_" + string(1:num_robots) + ".tum";
+        save_fpaths = save_dir + "/cora_" + string(1:num_robots) + ".tum";
         for robot_idx = 1:num_robots
             % open the file to write to
             fid = fopen(save_fpaths(robot_idx), 'w');
