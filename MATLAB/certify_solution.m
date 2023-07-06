@@ -1,10 +1,15 @@
-function [is_opt, cert_time] = certify_solution(problem_data, X, verbose)
+function [is_opt, cert_time, min_eigvec] = certify_solution(problem_data, X, verbose, get_min_eigvec)
     if verbose
         tic
     end
 
+    if nargin < 4
+        get_min_eigvec = false;
+    end
+
     % set up the problem
     stacked_constraints = problem_data.stacked_constraints;
+    min_eigvec = [];
     % if stacked constraints is empty, then we have no constraints and the
     % solution is optimal (we just solved a convex QP)
     if isempty(stacked_constraints)
@@ -50,9 +55,25 @@ function [is_opt, cert_time] = certify_solution(problem_data, X, verbose)
             break
         end
     end
-    if ~is_opt && verbose
-        fprintf("Not certified after beta of %d \n", beta);
+    if ~is_opt
+        if get_min_eigvec
+            % get minimum eigenvector of S, which is real and symmetric (Hermitian)
+            [min_eigvec, ~, not_converged] = eigs(S, 1, 'smallestreal', ...
+                'Tolerance', 1e-6,...
+                'SubspaceDimension', 500,...
+                'MaxIterations', 700);
+            if not_converged
+                warning("eigs did not converge");
+                min_eigvec = [];
+            end
+        end
+        if verbose
+            fprintf("Not certified after beta of %d \n", beta);
+        end
     end
+
+    % time for certification
+    cert_time = toc;
     if verbose
         cert_time = toc;
         fprintf("Certification took %f seconds \n", cert_time);

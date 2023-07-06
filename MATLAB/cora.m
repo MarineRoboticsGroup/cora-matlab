@@ -21,7 +21,6 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         if ~isfield(store, 'QX')
             store.QX = Q*X;
         end
-%         QX = store.QX;
         g = store.QX;
     end
 
@@ -49,22 +48,23 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
 
     % if we know there are no loop closures and we're randomly initializing then
     % let's skip a few dimensions higher (from experience)
-    lifted_dim = base_dim + 4; % start out by lifting some dimensions
+    lifted_dim = base_dim; % start out by lifting some dimensions
     if isfield(problem, 'num_loop_closures')
         if problem.num_loop_closures == 0 && isempty(init_point)
-                lifted_dim = base_dim + 3;
+            lifted_dim = base_dim + 3;
         end
     end
 
     cora_iterates_info = [];
     soln_is_optimal = false;
+    perturb_lifted_init = true;
+    min_eigvec = [];
     while ~soln_is_optimal
         % solve the lifted problem and try to certify it
         fprintf("Trying to solve at rank %d\n", lifted_dim);
-%         check_value_is_valid(problem, init_point);
-        perturb_lifted_init = true;
-        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts,perturb_lifted_init);
-        soln_is_optimal = certify_solution(problem, Xlift, Manopt_opts.verbosity);
+        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts,perturb_lifted_init, min_eigvec);
+        [soln_is_optimal, ~, min_eigvec] = certify_solution(problem, Xlift, Manopt_opts.verbosity, true);
+        perturb_lifted_init = false;
 
         % add all of the new Xvals from manopt_info to cora_iterates_info but do not
         % add anything else from manopt_info
@@ -96,7 +96,8 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
 
     % refine the rounded solution with one last optimization
     perturb_lifted_init = false;
-    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, perturb_lifted_init);
+    perturbation_vec = [];
+    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, perturb_lifted_init, perturbation_vec);
     cora_iterates_info = [cora_iterates_info, soln_manopt_info];
 
     % print the rank, singular values, and cost of the solution
