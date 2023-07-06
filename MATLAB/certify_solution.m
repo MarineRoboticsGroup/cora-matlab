@@ -57,17 +57,16 @@ function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_
         end
     end
     if ~is_opt
-        if get_min_eigvec
-            % get minimum eigenvector of S, which is real and symmetric (Hermitian)
-            [min_eigvec, min_eigval, not_converged] = get_saddle_escape_direction(S);
-            if not_converged
-                warning("eigs did not converge");
-                min_eigvec = [];
-                min_eigval = [];
-            end
-        end
         if verbose
             fprintf("Not certified after beta of %d \n", beta);
+        end
+
+        % get minimum eigenvector of S, which is real and symmetric (Hermitian)
+        [min_eigvec, min_eigval, not_converged] = get_saddle_escape_direction(S);
+        if not_converged
+            warning("Saddle escape search did not converge");
+            min_eigvec = [];
+            min_eigval = [];
         end
     end
 
