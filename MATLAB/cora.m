@@ -59,11 +59,12 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     soln_is_optimal = false;
     perturb_lifted_init = true;
     min_eigvec = [];
+    min_eigval = [];
     while ~soln_is_optimal
         % solve the lifted problem and try to certify it
         fprintf("Trying to solve at rank %d\n", lifted_dim);
-        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts,perturb_lifted_init, min_eigvec);
-        [soln_is_optimal, ~, min_eigvec] = certify_solution(problem, Xlift, Manopt_opts.verbosity, true);
+        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts,perturb_lifted_init, min_eigvec, min_eigval);
+        [soln_is_optimal, ~, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity, true);
         perturb_lifted_init = false;
 
         % add all of the new Xvals from manopt_info to cora_iterates_info but do not
