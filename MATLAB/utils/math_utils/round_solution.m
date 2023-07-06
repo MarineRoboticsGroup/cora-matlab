@@ -1,5 +1,8 @@
-function rounded_soln = round_solution(X, problem, verbosity)
-    dim = problem.dim;
+function rounded_soln = round_solution(X, problem, verbosity, dim)
+    base_dim = problem.dim;
+    if nargin < 4
+        dim = problem.dim;
+    end
     num_poses = problem.num_poses;
 
     % get U, S, Vh from the SVD (rounding is thin SVD)
@@ -21,13 +24,13 @@ function rounded_soln = round_solution(X, problem, verbosity)
     % they are left-handed, in which case they need to be flipped
     determinants = zeros(1, num_poses);
     for i = 0:num_poses-1
-        pose_i_start = i * (dim + 1) + 1;
-        rot_i = rounded_soln(:, pose_i_start : pose_i_start + dim-1);
-        [Urot, ~, Vrot] = svd(rot_i);
+        pose_i_start = i * (base_dim + 1) + 1;
+        rot_i = rounded_soln(:, pose_i_start : pose_i_start + base_dim-1);
+        [Urot, S, Vrot] = svd(rot_i, "econ");
         Vhrot = Vrot';
         rot_i = Urot * Vhrot;
-        rounded_soln(:, pose_i_start : pose_i_start + dim-1) = rot_i;
-        determinants(i+1) = det(rot_i);
+        rounded_soln(:, pose_i_start : pose_i_start + base_dim-1) = rot_i;
+        determinants(i+1) = det(S);
     end
 
     num_good_rotations = sum(abs(determinants - 1) < 1e-2);
