@@ -1,5 +1,5 @@
 % get the initialization
-function lifted_init = lift_init_point(problem, X, lifted_manifold, add_noise, saddle_escape_dir, second_order_descent_val, tolgradnorm)
+function lifted_init = lift_init_point(problem, X, lifted_manifold, add_noise, saddle_escape_dir, ~, tolgradnorm)
 
     % require that all arguments are given
     if nargin < 6
