@@ -53,7 +53,7 @@ function [least_eigvec, least_eigval, not_converged] = get_saddle_escape_directi
             num_blk_size_one = num_blk_size_one + 1;
         else
             blk = D_orig(cur_idx:cur_idx+1, cur_idx:cur_idx+1);
-            [Q, lambda] = eig(blk);
+            [Q, lambda] = eigs(blk);
             D(cur_idx:cur_idx+1, cur_idx:cur_idx+1) = ...
                 Q * diag(1 ./ abs(diag(lambda))) * Q';
             cur_idx = cur_idx + 2;
