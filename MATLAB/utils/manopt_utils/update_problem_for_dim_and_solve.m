@@ -1,4 +1,4 @@
-function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts, perturb_lifted_init)
+function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts, add_noise, perturbation, second_order_descent_val)
     % updates the problem to have the given lifted dimension and solves it
     % using manopt
     %
@@ -25,45 +25,16 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     LT = L';
     problem.precon = @(X, U, store) preconditioner(X, U, store, problem, M, L, LT);
 
-    % get the initialization
-    function lifted_init = lift_init_point(X, lifted_manifold, add_noise)
-
-        % require that 3 args are given
-        if nargin < 3
-            error('lift_init_point requires 3 arguments: X, lifted_manifold, add_noise');
-        end
-
-        base_dim = lifted_manifold.base_dim;
-        lift_dim = lifted_manifold.lifted_dim;
-
-        % make sure base_dim <= size(X, 2) <= lift_dim
-        assert(base_dim <= size(X, 2) && size(X, 2) <= lift_dim, ...
-            'lift_init_point: X must have size(X, 2) in [base_dim, lifted_dim] but has shape %s', mat2str(size(X)));
-
-        % pad X with zeros to make it the right shape
-        lifted_init = lifted_manifold.zeros();
-        lifted_init(:, 1:size(X, 2)) = X;
-
-        % randomly apply a rotation to the lifted point to fill the zero entries
-        % but keeping the rotation the same (up to gauge symmetry)
-        rot = randrot(lift_dim);
-        lifted_init = lifted_init * rot;
-
-        % if desired, add some noise to the lifted point. This is useful becausei
-        % if rank(lifted_init) < lifted_dim, then it is likely (due to the
-        % fundamentals of manifold optimization) that we will not be able to
-        % estimate a higher rank point
-        if add_noise
-            lifted_init = lifted_init + 1e-3 * rand(size(lifted_init));
-        end
-    end
-
     % if init_point is [], then get a random point from M
-    add_noise = perturb_lifted_init;
     if isempty(init_point)
         X0 = M.rand();
     else
-        X0 = lift_init_point(init_point, M, add_noise);
+        X0 = lift_init_point(problem, init_point, M, add_noise, perturbation, second_order_descent_val);
+        if ~isempty(perturbation)
+            % project to the manifold
+            % M.retr(x, u, t)
+            X0 = M.retr(X0, X0, 1)
+        end
     end
 
     % if no Delta_bar is given, then base it on the typical distance of the manifold
