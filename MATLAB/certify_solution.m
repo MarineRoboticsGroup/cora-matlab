@@ -1,10 +1,6 @@
-function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_data, X, verbose, get_min_eigvec)
+function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_data, X, verbose)
     if verbose
         tic
-    end
-
-    if nargin < 4
-        get_min_eigvec = false;
     end
 
     % set up the problem
