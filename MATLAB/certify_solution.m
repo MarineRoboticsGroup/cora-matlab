@@ -1,4 +1,4 @@
-function [is_opt, cert_time, min_eigvec] = certify_solution(problem_data, X, verbose, get_min_eigvec)
+function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_data, X, verbose, get_min_eigvec)
     if verbose
         tic
     end
@@ -10,6 +10,7 @@ function [is_opt, cert_time, min_eigvec] = certify_solution(problem_data, X, ver
     % set up the problem
     stacked_constraints = problem_data.stacked_constraints;
     min_eigvec = [];
+    min_eigval = [];
     % if stacked constraints is empty, then we have no constraints and the
     % solution is optimal (we just solved a convex QP)
     if isempty(stacked_constraints)
@@ -58,13 +59,11 @@ function [is_opt, cert_time, min_eigvec] = certify_solution(problem_data, X, ver
     if ~is_opt
         if get_min_eigvec
             % get minimum eigenvector of S, which is real and symmetric (Hermitian)
-            [min_eigvec, ~, not_converged] = eigs(S, 1, 'smallestreal', ...
-                'Tolerance', 1e-6,...
-                'SubspaceDimension', 500,...
-                'MaxIterations', 700);
+            [min_eigvec, min_eigval, not_converged] = get_saddle_escape_direction(S);
             if not_converged
                 warning("eigs did not converge");
                 min_eigvec = [];
+                min_eigval = [];
             end
         end
         if verbose
