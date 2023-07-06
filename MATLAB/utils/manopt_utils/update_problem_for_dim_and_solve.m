@@ -29,12 +29,7 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     if isempty(init_point)
         X0 = M.rand();
     else
-        X0 = lift_init_point(problem, init_point, M, add_noise, perturbation, second_order_descent_val);
-        if ~isempty(perturbation)
-            % project to the manifold
-            % M.retr(x, u, t)
-            X0 = M.retr(X0, X0, 1)
-        end
+        X0 = lift_init_point(problem, init_point, M, add_noise, perturbation, second_order_descent_val, Manopt_opts.tolgradnorm);
     end
 
     % if no Delta_bar is given, then base it on the typical distance of the manifold
