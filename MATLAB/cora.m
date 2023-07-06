@@ -57,15 +57,15 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
 
     cora_iterates_info = [];
     soln_is_optimal = false;
-    perturb_lifted_init = true;
+    add_noise_to_lifted_pt = true;
     min_eigvec = [];
     min_eigval = [];
     while ~soln_is_optimal
         % solve the lifted problem and try to certify it
         fprintf("Trying to solve at rank %d\n", lifted_dim);
-        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts,perturb_lifted_init, min_eigvec, min_eigval);
+        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts, add_noise_to_lifted_pt, min_eigvec, min_eigval);
         [soln_is_optimal, ~, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity);
-        perturb_lifted_init = false;
+        add_noise_to_lifted_pt = false;
 
         % add all of the new Xvals from manopt_info to cora_iterates_info but do not
         % add anything else from manopt_info
@@ -96,9 +96,8 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     Xround = round_solution(Xlift, problem, Manopt_opts.verbosity);
 
     % refine the rounded solution with one last optimization
-    perturb_lifted_init = false;
-    perturbation_vec = [];
-    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, perturb_lifted_init, perturbation_vec);
+    add_noise_to_pt = false;
+    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, add_noise_to_pt, [], []);
     cora_iterates_info = [cora_iterates_info, soln_manopt_info];
 
     % print the rank, singular values, and cost of the solution
