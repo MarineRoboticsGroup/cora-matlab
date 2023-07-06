@@ -106,16 +106,12 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         fprintf("Cost of refined solution is %f\n", Fval_base_dim);
     end
 
-    % print if the final solution is optimal
-    final_soln_optimal = certify_solution(problem, X, Manopt_opts.verbosity);
-    fprintf("Singular values of refined solution are: %s \n", mat2str(svd(X)));
-
-    if final_soln_optimal
+    gap = Fval_base_dim - Fval_lifted;
+    rel_suboptimality = gap / Fval_base_dim;
+    if gap < 1e-5
         warning("Final solution is optimal");
     else
         % print the gap between the final solution and the optimal solution
-        gap = Fval_base_dim - Fval_lifted;
-        rel_suboptimality = gap / Fval_base_dim;
         warning("Gap between final solution and optimal solution is %f", gap);
         warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
     end
