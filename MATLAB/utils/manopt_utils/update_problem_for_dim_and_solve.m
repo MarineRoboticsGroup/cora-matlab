@@ -12,10 +12,6 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     M = RaSlamManifoldFactory(problem, lifted_dim);
     problem.M = M;
 
-    if Manopt_opts.verbosity > 0
-        fprintf("Manifold typical distance: %f\n", M.typicaldist());
-    end
-
     % use incomplete Cholesky preconditioner
     function [u, store] = preconditioner(X, U, store, ~, mani, L, LT)
         u = LT \ (L \ U);
