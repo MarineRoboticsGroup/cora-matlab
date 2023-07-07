@@ -26,7 +26,6 @@ function lifted_init = lift_init_point(problem, X, lifted_manifold, add_noise, s
     % if saddle_escape_dir is given, then add_noise must be false and we are only
     % incrementing the size of X by one
     if ~isempty(saddle_escape_dir)
-        assert(~add_noise, 'lift_init_point: if saddle_escape_dir is given, then add_noise must be false');
         assert(size(saddle_escape_dir, 2) == 1, 'lift_init_point: if saddle_escape_dir is given, then size(saddle_escape_dir, 2) must be 1');
         assert(size(X, 2) + 1 == lift_dim, 'lift_init_point: if saddle_escape_dir is given, then size(X, 2) + 1 must be lift_dim');
     elseif add_noise
@@ -41,7 +40,6 @@ function lifted_init = lift_init_point(problem, X, lifted_manifold, add_noise, s
         % if we have a saddle_escape_dir, treat it as a tangent vector and retract
         % lifted_init = lifted_manifold.retr(lifted_init, saddle_escape_dir, 1e-2);
         [lifted_init, search_success] = retract_along_direction_with_linesearch(problem, tolgradnorm, lifted_init, saddle_escape_dir);
-        fprintf('Saddle escape direction search success: %d\n', search_success);
     end
 
     % randomly apply a rotation to the lifted point to fill the zero entries

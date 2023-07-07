@@ -110,10 +110,12 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     rel_suboptimality = gap / Fval_base_dim;
     if gap < 1e-5
         warning("Final solution is optimal");
+        final_soln_optimal = true;
     else
         % print the gap between the final solution and the optimal solution
         warning("Gap between final solution and optimal solution is %f", gap);
         warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
+        final_soln_optimal = false;
     end
 
 end

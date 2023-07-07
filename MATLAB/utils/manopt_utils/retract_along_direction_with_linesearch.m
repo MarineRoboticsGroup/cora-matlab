@@ -12,8 +12,9 @@ function [new_pt, linesearch_success] = retract_along_direction_with_linesearch(
     end
 
     % set the minimum and initial stepsize
-    alpha_min = 1e-4;
-    alpha = max(0.75, 1000 * tolgradnorm / norm(search_dir));
+    typical_dist = problem.M.typicaldist();
+    alpha_min = typical_dist * 1e-7;
+    alpha = typical_dist * 1e-2;
 
     % Vectors of trial stepsizes and corresponding function values
     alphas = [];
@@ -31,25 +32,31 @@ function [new_pt, linesearch_success] = retract_along_direction_with_linesearch(
         % sufficiently large that we will not automatically trigger the
         % gradient tolerance stopping criterion at the next iteration
         fytest = getCost(problem, ytest);
-        grad_fytest = getGradient(problem, ytest);
-        grad_fytest_norm = norm(grad_fytest);
-        preconditioned_grad_fytest = problem.precon(ytest, grad_fytest, []);
-        preconditioned_grad_fytest_norm = norm(preconditioned_grad_fytest);
+        % check the cost decrease
+        rel_cost_decrease = (cost - fytest) / cost;
+        if rel_cost_decrease > 1e-4
+
+            % check the gradient norm
+            grad_fytest = getGradient(problem, ytest);
+            grad_fytest_norm = norm(grad_fytest);
+            if grad_fytest_norm > 3*tolgradnorm
+
+                % check the preconditioned gradient norm
+                preconditioned_grad_fytest = problem.precon(ytest, grad_fytest, []);
+                preconditioned_grad_fytest_norm = norm(preconditioned_grad_fytest);
+                if preconditioned_grad_fytest_norm > 3*tolgradnorm
+                    % Accept this trial point and return success
+                    new_pt = ytest;
+                    linesearch_success = true;
+                    return;
+                end
+            end
+
+        end
 
         % Record trial stepsize and function value
         alphas = [alphas, alpha];
         fvals = [fvals, fytest];
-
-        % Check the stopping criterion
-        rel_cost_decrease = (cost - fytest) / cost;
-        if (rel_cost_decrease > 1e-4 && grad_fytest_norm > 3*tolgradnorm && preconditioned_grad_fytest_norm > 3*tolgradnorm)
-
-            % Accept this trial point and return success
-            new_pt = ytest;
-            linesearch_success = true;
-            return;
-
-        end
         alpha = alpha / 1.5;
 
     end

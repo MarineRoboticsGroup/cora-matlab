@@ -52,9 +52,17 @@ function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_
             break
         end
     end
+
+    % time for certification
+    if verbose
+        cert_time = toc;
+        fprintf("Certification took %f seconds \n", cert_time);
+    end
+
     if ~is_opt
         if verbose
             fprintf("Not certified after beta of %d \n", beta);
+            tic;
         end
 
         % get minimum eigenvector of S, which is real and symmetric (Hermitian)
@@ -64,14 +72,12 @@ function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_
             min_eigvec = [];
             min_eigval = [];
         end
+        if verbose
+            saddle_time = toc;
+            fprintf("Saddle escape search took %f seconds \n", saddle_time);
+        end
     end
 
-    % time for certification
-    cert_time = toc;
-    if verbose
-        cert_time = toc;
-        fprintf("Certification took %f seconds \n", cert_time);
-    end
 end
 
 function isPSD = testPSDofMat(mat, reg_term)
