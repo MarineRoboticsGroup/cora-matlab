@@ -21,7 +21,6 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         if ~isfield(store, 'QX')
             store.QX = Q*X;
         end
-%         QX = store.QX;
         g = store.QX;
     end
 
@@ -49,22 +48,24 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
 
     % if we know there are no loop closures and we're randomly initializing then
     % let's skip a few dimensions higher (from experience)
-    lifted_dim = base_dim + 4; % start out by lifting some dimensions
+    lifted_dim = base_dim; % start out by lifting some dimensions
     if isfield(problem, 'num_loop_closures')
         if problem.num_loop_closures == 0 && isempty(init_point)
-                lifted_dim = base_dim + 3;
+            lifted_dim = base_dim + 3;
         end
     end
 
     cora_iterates_info = [];
     soln_is_optimal = false;
+    add_noise_to_lifted_pt = true;
+    min_eigvec = [];
+    min_eigval = [];
     while ~soln_is_optimal
         % solve the lifted problem and try to certify it
         fprintf("Trying to solve at rank %d\n", lifted_dim);
-%         check_value_is_valid(problem, init_point);
-        perturb_lifted_init = true;
-        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts,perturb_lifted_init);
-        soln_is_optimal = certify_solution(problem, Xlift, Manopt_opts.verbosity);
+        [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts, add_noise_to_lifted_pt, min_eigvec, min_eigval);
+        [soln_is_optimal, ~, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity);
+        add_noise_to_lifted_pt = false;
 
         % add all of the new Xvals from manopt_info to cora_iterates_info but do not
         % add anything else from manopt_info
@@ -95,8 +96,8 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     Xround = round_solution(Xlift, problem, Manopt_opts.verbosity);
 
     % refine the rounded solution with one last optimization
-    perturb_lifted_init = false;
-    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, perturb_lifted_init);
+    add_noise_to_pt = false;
+    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, add_noise_to_pt, [], []);
     cora_iterates_info = [cora_iterates_info, soln_manopt_info];
 
     % print the rank, singular values, and cost of the solution
@@ -105,18 +106,16 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         fprintf("Cost of refined solution is %f\n", Fval_base_dim);
     end
 
-    % print if the final solution is optimal
-    final_soln_optimal = certify_solution(problem, X, Manopt_opts.verbosity);
-    fprintf("Singular values of refined solution are: %s \n", mat2str(svd(X)));
-
-    if final_soln_optimal
+    gap = Fval_base_dim - Fval_lifted;
+    rel_suboptimality = gap / Fval_base_dim;
+    if gap < 1e-5
         warning("Final solution is optimal");
+        final_soln_optimal = true;
     else
         % print the gap between the final solution and the optimal solution
-        gap = Fval_base_dim - Fval_lifted;
-        rel_suboptimality = gap / Fval_base_dim;
         warning("Gap between final solution and optimal solution is %f", gap);
         warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
+        final_soln_optimal = false;
     end
 
 end

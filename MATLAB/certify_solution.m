@@ -1,10 +1,12 @@
-function [is_opt, cert_time] = certify_solution(problem_data, X, verbose)
+function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_data, X, verbose)
     if verbose
         tic
     end
 
     % set up the problem
     stacked_constraints = problem_data.stacked_constraints;
+    min_eigvec = [];
+    min_eigval = [];
     % if stacked constraints is empty, then we have no constraints and the
     % solution is optimal (we just solved a convex QP)
     if isempty(stacked_constraints)
@@ -50,13 +52,32 @@ function [is_opt, cert_time] = certify_solution(problem_data, X, verbose)
             break
         end
     end
-    if ~is_opt && verbose
-        fprintf("Not certified after beta of %d \n", beta);
-    end
+
+    % time for certification
     if verbose
         cert_time = toc;
         fprintf("Certification took %f seconds \n", cert_time);
     end
+
+    if ~is_opt
+        if verbose
+            fprintf("Not certified after beta of %d \n", beta);
+            tic;
+        end
+
+        % get minimum eigenvector of S, which is real and symmetric (Hermitian)
+        [min_eigvec, min_eigval, not_converged] = get_saddle_escape_direction(S);
+        if not_converged
+            warning("Saddle escape search did not converge");
+            min_eigvec = [];
+            min_eigval = [];
+        end
+        if verbose
+            saddle_time = toc;
+            fprintf("Saddle escape search took %f seconds \n", saddle_time);
+        end
+    end
+
 end
 
 function isPSD = testPSDofMat(mat, reg_term)
