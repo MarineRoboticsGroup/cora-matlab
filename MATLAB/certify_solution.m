@@ -42,7 +42,7 @@ function [is_opt, cert_time, min_eigvec, min_eigval] = certify_solution(problem_
 
     % set is_opt to true if we can cholesky factorize S
     % iterate from 1e-10, 1e-9, ...
-    for i = -5:-5
+    for i = -4:-4
         beta = 10^(i);
         is_opt = testPSDofMat(S, beta);
         if is_opt

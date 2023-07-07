@@ -49,11 +49,6 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     % if we know there are no loop closures and we're randomly initializing then
     % let's skip a few dimensions higher (from experience)
     lifted_dim = base_dim; % start out by lifting some dimensions
-    if isfield(problem, 'num_loop_closures')
-        if problem.num_loop_closures == 0 && isempty(init_point)
-            lifted_dim = base_dim + 3;
-        end
-    end
 
     cora_iterates_info = [];
     soln_is_optimal = false;
