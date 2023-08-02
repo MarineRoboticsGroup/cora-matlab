@@ -9,7 +9,12 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     %  Manopt_opts: the options struct used by manopt
 
 
-    M = RaSlamManifoldFactory(problem, lifted_dim);
+    if problem.Q_is_marginalized
+        M = MarginalizedRaSlamManifoldFactory(problem, lifted_dim);
+
+    else
+        M = RaSlamManifoldFactory(problem, lifted_dim);
+    end
     problem.M = M;
 
     % use incomplete Cholesky preconditioner
@@ -18,12 +23,7 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
         u = mani.tangent(X, u);
     end
 
-    LGrho = problem.Q;
-    ichol_opts.diagcomp = 1e-3;
-    LGrho = LGrho + ichol_opts.diagcomp * speye(size(LGrho));
-    L = ichol(LGrho, ichol_opts);
-    LT = L';
-    problem.precon = @(X, U, store) preconditioner(X, U, store, problem, M, L, LT);
+    problem.precon = @(X, U, store) preconditioner(X, U, store, problem, M, problem.L, problem.LT);
 
     % if init_point is [], then get a random point from M
     if isempty(init_point)

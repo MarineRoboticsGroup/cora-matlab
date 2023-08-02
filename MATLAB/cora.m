@@ -7,30 +7,54 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
 
 
     %%%%%% general problem info
-    Q = problem.Q;
+    if problem.Q_is_marginalized
+        Q = problem.Qmarg;
+    else
+        Q = problem.Q;
+    end
     function [f, store] = cost(X, store)
         if ~isfield(store, 'QX')
-            store.QX = Q*X;
+            if problem.Q_is_marginalized
+                store.QX = Q(X);
+            else
+                store.QX = Q*X;
+            end
         end
-        QX = store.QX;
-
-        f = 0.5* trace(X'*QX);
+        f = 0.5* trace(X'*store.QX);
     end
 
     function [g, store] = egrad(X, store)
         if ~isfield(store, 'QX')
-            store.QX = Q*X;
+            if problem.Q_is_marginalized
+                store.QX = Q(X);
+            else
+                store.QX = Q*X;
+            end
         end
         g = store.QX;
     end
 
     function [h, store] = ehess(~, dX, store)
-        h = Q * dX;
+        if problem.Q_is_marginalized
+            h = Q(dX);
+        else
+            h = Q * dX;
+        end
     end
 
     problem.cost = @cost;
     problem.egrad = @egrad;
     problem.ehess = @ehess;
+
+    fprintf("Setting up preconditioner...\n")
+    if problem.Q_is_marginalized
+        [L, LT] = get_regularized_cholesky_preconditioner(problem.Qxx, 1e4);
+    else
+        [L, LT] = get_regularized_cholesky_preconditioner(problem.Q, 1e4);
+        % [L, LT] = get_ichol_preconditioner(problem.Q);
+    end
+    problem.L = L;
+    problem.LT = LT;
 
     %%%%%% problem info - unique to lifted dimension
 
@@ -59,8 +83,17 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         % solve the lifted problem and try to certify it
         fprintf("Trying to solve at rank %d\n", lifted_dim);
         [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts, add_noise_to_lifted_pt, min_eigvec, min_eigval);
-        [soln_is_optimal, ~, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity);
-        add_noise_to_lifted_pt = false;
+        [soln_is_optimal, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity);
+
+        % Xlift should be tall and skinny
+        assert(size(Xlift, 1) > size(Xlift, 2));
+
+        % if eigpairs are empty then add noise to lifted point
+        if isempty(min_eigvec) && isempty(min_eigval)
+            add_noise_to_lifted_pt = true;
+        else
+            add_noise_to_lifted_pt = false;
+        end
 
         % add all of the new Xvals from manopt_info to cora_iterates_info but do not
         % add anything else from manopt_info
@@ -88,29 +121,40 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         fprintf("Cost of lifted solution is %f\n", Fval_lifted);
     end
 
+    % save("Xlift.mat", "Xlift");
+
+    if size(Xlift, 2) == problem.dim
+        X = Xlift;
+        final_soln_optimal = true;
+        fprintf("Problem was solved at the base dimension, no rounding and refinement needed.\n")
+    else
+        [X, Fval_base_dim, soln_manopt_info] = round_lifted_solution_and_refine(Xlift, problem, Manopt_opts);
+        cora_iterates_info = [cora_iterates_info, soln_manopt_info];
+        gap = Fval_base_dim - Fval_lifted;
+        rel_suboptimality = gap / Fval_base_dim;
+        if gap < 1e-5
+            warning("Final solution is optimal");
+            final_soln_optimal = true;
+        else
+            % print the gap between the final solution and the optimal solution
+            warning("Gap between final solution and optimal solution is %f", gap);
+            warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
+            final_soln_optimal = false;
+        end
+    end
+end
+
+function [X, Fval_base_dim, soln_manopt_info] = round_lifted_solution_and_refine(Xlift, problem, Manopt_opts)
     Xround = round_solution(Xlift, problem, Manopt_opts.verbosity);
 
     % refine the rounded solution with one last optimization
     add_noise_to_pt = false;
-    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, add_noise_to_pt, [], []);
-    cora_iterates_info = [cora_iterates_info, soln_manopt_info];
+    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, problem.dim, Xround', Manopt_opts, add_noise_to_pt, [], []);
 
     % print the rank, singular values, and cost of the solution
     if Manopt_opts.verbosity > 0
         fprintf("Refined solution has rank %d\n", rank(X));
         fprintf("Cost of refined solution is %f\n", Fval_base_dim);
-    end
-
-    gap = Fval_base_dim - Fval_lifted;
-    rel_suboptimality = gap / Fval_base_dim;
-    if gap < 1e-5
-        warning("Final solution is optimal");
-        final_soln_optimal = true;
-    else
-        % print the gap between the final solution and the optimal solution
-        warning("Gap between final solution and optimal solution is %f", gap);
-        warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
-        final_soln_optimal = false;
     end
 
 end

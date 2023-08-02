@@ -1,6 +1,10 @@
 % get the initialization
 function lifted_init = lift_init_point(problem, X, lifted_manifold, add_noise, saddle_escape_dir, ~, tolgradnorm)
 
+    warning("Blanket ignoring saddle escape directions!")
+    saddle_escape_dir = [];
+    add_noise = true;
+
     % require that all arguments are given
     if nargin < 6
         error('lift_init_point requires at least %d arguments but was given %d ', expected_nargin, nargin);

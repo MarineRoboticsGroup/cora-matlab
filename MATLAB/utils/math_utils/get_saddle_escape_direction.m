@@ -14,7 +14,7 @@ function [least_eigvec, least_eigval, not_converged] = get_saddle_escape_directi
     global D
     global P
     global PT
-    nu = 1e-5;
+    nu = 1e-8;
     M = S + (nu * spI);
     [L, D_orig, P] = ldl(M);
     LT = L';

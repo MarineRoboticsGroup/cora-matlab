@@ -1,19 +1,20 @@
-function X = align_solution_by_first_pose(X, problem_data)
-    [nrows, ncols] = size(X);
-    assert(nrows < ncols, "There should be more columns than rows, try transposing the matrix");
+function X = align_solution_by_first_pose(X, dim, first_rot_idxs, t_idxs, l_idxs)
+    % make sure we have 4 args
+    assert (nargin == 5, "align_solution_by_first_pose requires 5 arguments");
 
-    % get some useful values and run sanity checks
-    dim = problem_data.dim;
+    [nrows, ncols] = size(X);
+
+    % matrix should be short and wide
+    assert(nrows < ncols, "There should be more columns than rows, try transposing the matrix");
 
     % if there is a prior then the first pose is an "origin" frame and can
     % be used to align the solution
-    T_origin = X(:, 1:dim+1);
-    R_origin = T_origin(1:dim, 1:dim);
-    t_origin = T_origin(:, dim+1);
+    R_origin = X(:, first_rot_idxs);
+    t_origin = X(:, t_idxs(1));
     R_inv_origin = R_origin';
     t_inv_origin = - (R_inv_origin * t_origin);
     X = R_inv_origin * X;
-    X(:, problem_data.all_t_idxs) = X(:, problem_data.all_t_idxs) + t_inv_origin;
-    X(:, problem_data.all_l_idxs) = X(:, problem_data.all_l_idxs) + t_inv_origin;
+    X(:, t_idxs) = X(:, t_idxs) + t_inv_origin;
+    X(:, l_idxs) = X(:, l_idxs) + t_inv_origin;
 
 end
