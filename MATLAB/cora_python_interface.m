@@ -4,13 +4,15 @@
         problem_fpath, animation_show_gt, look_for_cached_soln, nargout=0
     )
 %}
-function cora_python_interface(problem_fpath, show_animation, animation_show_gt, look_for_cached_soln)
+function cora_python_interface(problem_fpath, show_animation, animation_show_gt, look_for_cached_soln, solve_marginalized_problem)
 
     data_path = problem_fpath;
-    res_path = strrep(data_path, ".mat", "_results.mat");
-    cora_iterates_info_path = strrep(data_path, '.mat', '_cora_iterates_info.mat');
+    assert(endsWith(data_path, ".pyfg"), "data_path must be a .pyfg file");
+
+    res_path = strrep(data_path, ".pyfg", "_results.mat");
+    cora_iterates_info_path = strrep(data_path, ".pyfg", '_cora_iterates_info.mat');
     data_dir = fileparts(data_path);
-    exp_data = load_ra_slam_problem(data_path);
+    exp_data = parse_pyfg_text(problem_fpath, solve_marginalized_problem);
 
     if look_for_cached_soln && exist(res_path, 'file') && exist(cora_iterates_info_path, 'file')
         warning("Results already found for experiment %s ... skipping", data_path);
@@ -22,8 +24,6 @@ function cora_python_interface(problem_fpath, show_animation, animation_show_gt,
         end
         return
     end
-
-    exp_data = load_ra_slam_problem(data_path);
 
     % set the options for the solver
     manopt_opts.init = "random";

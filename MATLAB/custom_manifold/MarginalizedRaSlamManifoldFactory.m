@@ -1,5 +1,5 @@
 function M = MarginalizedRaSlamManifoldFactory(problem, lifted_dim)
-    assert (problem.Q_is_marginalized, "Q must be marginalized for this manifold to work.")
+    assert (problem.use_marginalized, "Q must be marginalized for this manifold to work.")
 
     % unpack problem info
     num_poses = problem.num_poses;

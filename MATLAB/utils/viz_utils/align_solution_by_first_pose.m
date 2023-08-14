@@ -1,6 +1,7 @@
 function X = align_solution_by_first_pose(X, dim, first_rot_idxs, t_idxs, l_idxs)
     % make sure we have 4 args
     assert (nargin == 5, "align_solution_by_first_pose requires 5 arguments");
+    assert (dim == length(first_rot_idxs), "first_rot_idxs should be a vector of indices");
 
     [nrows, ncols] = size(X);
 

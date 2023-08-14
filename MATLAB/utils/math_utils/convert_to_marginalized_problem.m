@@ -26,7 +26,7 @@ function problem_data = convert_to_marginalized_problem(problem_data)
     assert (unmarginalized_d_idxs(end) == full_length);
 
     % overwrite the Q matrix with the new ordering
-    reordered_idxs = [unmarginalized_R_idxs, unmarginalized_d_idxs, unmarginalized_l_idxs, unmarginalized_t_idxs];
+    reordered_idxs = [unmarginalized_R_idxs, unmarginalized_d_idxs, unmarginalized_t_idxs, unmarginalized_l_idxs];
     problem_data.Q = problem_data.Q(reordered_idxs, reordered_idxs);
 
     % overwrite the variable indices with the new ordering
@@ -43,7 +43,7 @@ function problem_data = convert_to_marginalized_problem(problem_data)
     problem_data.Qyy = Qyy;
 
     % indicate that Q is now marginalized
-    problem_data.Q_is_marginalized = true;
+    problem_data.use_marginalized = true;
 
     % Qmarg = Qxx - Qxy*(Qyy\Qxy');
     % add a function to access Qmarg without explicitly computing it

@@ -5,7 +5,7 @@ function write_result_to_tum(X, problem_data, save_dir)
         X = X';
     end
 
-    has_priors = (problem_data.num_pose_priors + problem_data.num_beacon_priors) > 0;
+    has_priors = (problem_data.num_pose_priors + problem_data.num_landmark_priors) > 0;
     has_priors = int64(has_priors);
     dim = problem_data.dim;
 

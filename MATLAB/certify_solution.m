@@ -15,13 +15,14 @@ function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, ve
     end
 
 
-    if problem_data.Q_is_marginalized
-        spX = sparse(extract_translations_from_marginalized_solution(X, problem_data));
-    else
-        spX = sparse(X);
-    end
-    QX_height = size(problem_data.Q, 1);
-    vecQX = convert_vertically_stacked_block_matrix_to_column_vector_matrix(problem_data.Q * spX, QX_height);
+    % if problem_data.use_marginalized
+    %     spX = sparse(extract_translations_from_marginalized_solution(X, problem_data));
+    % else
+    %     spX = sparse(X);
+    % end
+    spX = sparse(X);
+    QX_height = problem_data.block_size;
+    vecQX = convert_vertically_stacked_block_matrix_to_column_vector_matrix(Qproduct(spX, problem_data), QX_height);
 
 
     % get the constraint gradients
@@ -42,15 +43,11 @@ function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, ve
     % unstack the columns of the weighted constraints
     weighted_constraints = reshape(weighted_constraints, block_height, []);
 
-    S = weighted_constraints + problem_data.Q;
-
-    % save lambdas, weighted_constraints, S, and X
-    save('lambdas.mat', 'lambdas');
-    save('weighted_constraints.mat', 'weighted_constraints');
-    save('S.mat', 'S');
-    save('X.mat', 'X');
-    % print save destination
-    fprintf("Saved lambdas, weighted_constraints, S, and X to %s \n", pwd);
+    if problem_data.use_marginalized
+        S = weighted_constraints + problem_data.Qmain;
+    else
+        S = weighted_constraints + problem_data.Q;
+    end
 
     % set is_opt to true if we can cholesky factorize S
     % iterate from 1e-10, 1e-9, ...

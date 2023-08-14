@@ -7,39 +7,22 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
 
 
     %%%%%% general problem info
-    if problem.Q_is_marginalized
-        Q = problem.Qmarg;
-    else
-        Q = problem.Q;
-    end
     function [f, store] = cost(X, store)
         if ~isfield(store, 'QX')
-            if problem.Q_is_marginalized
-                store.QX = Q(X);
-            else
-                store.QX = Q*X;
-            end
+            store.QX = Qproduct(X, problem);
         end
         f = 0.5* trace(X'*store.QX);
     end
 
     function [g, store] = egrad(X, store)
         if ~isfield(store, 'QX')
-            if problem.Q_is_marginalized
-                store.QX = Q(X);
-            else
-                store.QX = Q*X;
-            end
+            store.QX = Qproduct(X, problem);
         end
         g = store.QX;
     end
 
     function [h, store] = ehess(~, dX, store)
-        if problem.Q_is_marginalized
-            h = Q(dX);
-        else
-            h = Q * dX;
-        end
+        h = Qproduct(dX, problem);
     end
 
     problem.cost = @cost;
@@ -47,8 +30,9 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     problem.ehess = @ehess;
 
     fprintf("Setting up preconditioner...\n")
-    if problem.Q_is_marginalized
-        [L, LT] = get_regularized_cholesky_preconditioner(problem.Qxx, 1e4);
+    if problem.use_marginalized
+        [L, LT] = get_regularized_cholesky_preconditioner(problem.Qmain, 1e4);
+        % [L, LT] = get_ichol_preconditioner(problem.Qmain);
     else
         [L, LT] = get_regularized_cholesky_preconditioner(problem.Q, 1e4);
         % [L, LT] = get_ichol_preconditioner(problem.Q);
@@ -68,6 +52,11 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     else
         init_point = [];
         warning("No valid initialization given. Using random point as default.")
+    end
+
+    if problem.use_marginalized && ~isempty(init_point)
+        marginalized_dim = problem.dim * problem.num_poses + problem.num_range_measurements;
+        init_point = init_point(1: marginalized_dim, :);
     end
 
     % if we know there are no loop closures and we're randomly initializing then
@@ -120,8 +109,6 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         fprintf("Lifted solution has rank %d\n", rank(Xlift));
         fprintf("Cost of lifted solution is %f\n", Fval_lifted);
     end
-
-    % save("Xlift.mat", "Xlift");
 
     if size(Xlift, 2) == problem.dim
         X = Xlift;

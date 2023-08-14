@@ -1,6 +1,6 @@
 function t_idxs = get_robot_t_idxs(problem_data, t_idxs, robot_idx)
 
-    has_priors = (problem_data.num_pose_priors + problem_data.num_beacon_priors) > 0;
+    has_priors = (problem_data.num_pose_priors + problem_data.num_landmark_priors) > 0;
 
     num_robot_poses = problem_data.num_poses-has_priors; %remove the aux pose
     num_robots = problem_data.num_robots;

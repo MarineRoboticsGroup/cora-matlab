@@ -9,7 +9,7 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     %  Manopt_opts: the options struct used by manopt
 
 
-    if problem.Q_is_marginalized
+    if problem.use_marginalized
         M = MarginalizedRaSlamManifoldFactory(problem, lifted_dim);
 
     else
