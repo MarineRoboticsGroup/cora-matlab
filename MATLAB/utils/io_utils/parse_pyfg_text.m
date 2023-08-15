@@ -34,6 +34,10 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
     load_data_time = toc;
     fprintf('Finished loading data in %f seconds.\n', load_data_time);
 
+    if measurements_have_priors(measurements)
+        error('Priors are not currently supported.');
+    end
+
     % [pose_measurements, range_measurements, var_idx_mapping, dim, true_rots, true_pose_translations, true_landmarks] = get_pyfg_data(pyfg_fpath);
     pose_measurements = measurements.pose_measurements;
     range_measurements = measurements.range_measurements;

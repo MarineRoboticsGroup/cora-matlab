@@ -22,19 +22,37 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
 
 
     fid = fopen(pyfg_fpath, 'r');
+
+    % variables
     pose_var_names = strings(0);
     landmark_names = strings(0);
+
+    % pose priors
+    pose_prior_names = strings(0);
+    pose_prior_means = [];
+    pose_prior_precisions = [];
+
+    % landmark priors
+    landmark_prior_names = strings(0);
+    landmark_prior_means = [];
+    landmark_prior_precisions = [];
+
+    % measurements
     pose_edge_id = 0;
     range_edge_id = 0;
+
+    % ground truth
     true_rots = [];
     true_pose_translations = [];
     true_landmarks = [];
+
     read_line = fgets(fid);  % Read the next line from the file
 
     while ischar(read_line)  % As long as this line is a valid character string
         token = strtok(read_line);
 
         if (strcmp(token, 'VERTEX_SE3:QUAT'))
+            assert(~exist('d', 'var') || d == 3, "3D Pose in 2D problem")
             d = 3;
             % 3D POSE
             % VERTEX_SE3:QUAT <timestamp> <VertexName> <x> <y> <z> <qx> <qy> <qz> <qw>
@@ -47,6 +65,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             true_pose_translations = [true_pose_translations, [px; py; pz]];
 
         elseif(strcmp(token, 'VERTEX_SE2'))
+            assert(~exist('d', 'var') || d == 2, "2D Pose in 3D problem")
             d = 2;
             % 2D POSE
             % VERTEX_SE2 <timestamp> <VertexName> <x> <y> <theta>
@@ -60,6 +79,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             true_pose_translations = [true_pose_translations, [px; py]];
 
         elseif(strcmp(token, 'VERTEX_XY'))
+            assert(~exist('d', 'var') || d == 2, "2D landmark in 3D problem")
             d = 2;
             % 2D LANDMARK
             % VERTEX_XY <VertexName> <x> <y>
@@ -70,6 +90,8 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             true_landmarks = [true_landmarks, [lx; ly]];
 
         elseif(strcmp(token, 'VERTEX_XYZ'))
+            % d should either be empty or 3
+            assert(~exist('d', 'var') || d == 3, "3D landmark in 2D problem")
             d = 3;
             % 3D LANDMARK
             % VERTEX_XYZ <VertexName> <x> <y> <z>
@@ -78,9 +100,27 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             [~, var_name, lx, ly, lz] = C{:};
             landmark_names = [landmark_names; var_name];
             true_landmarks = [true_landmarks, [lx; ly; lz]];
+        elseif(strcmp(token, 'VERTEX_XY:PRIOR'))
+            assert(~exist('d', 'var') || d == 2, "2D landmark prior in 3D problem")
+            d = 2;
+            % VERTEX_XY:PRIOR 1665936917 L0 20.742063186872322 -25.000484838943855 0.20000000298023224 0.0 0.20000000298023224
+            % "{pose_prior_type} {pose_prior.timestamp:.{time_fprec}f} {pose_prior.name} {measurement_values} {measurement_noise}"
+            C = textscan(read_line, '%s %f %s %f %f %f %f %f');
+            [~, ~, var_name, lx, ly, C11, C12, C22] = C{:};
+
+            % right now assume that the prior is spherical
+            assert(C11 == C22 || C12 == 0, "Covariance matrix is not spherical")
+
+            % make sure we haven't already seen this landmark
+            assert(~ismember(var_name, landmark_prior_names), "Duplicate landmark prior")
+
+            % Store the landmark prior
+            landmark_prior_names = [landmark_prior_names; var_name];
+            landmark_prior_means = [landmark_prior_means, [lx; ly]];
+            landmark_prior_precisions = [landmark_prior_precisions, 1/C11];
 
         elseif(strcmp(token, 'EDGE_SE3:QUAT'))
-            % 3D OBSERVATION
+            % 3D Measurement
             assert (d == 3, "3D observation in 2D problem")
 
             pose_edge_id = pose_edge_id + 1;  % Increment the count for the number of edges
@@ -138,7 +178,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             kappa{pose_edge_id} = 3 / (2 *trace(measurement_covar(4:6, 4:6)));
 
         elseif(strcmp(token, 'EDGE_SE2'))
-            % 2D OBSERVATCON
+            % 2D Measurement
             assert (d == 2, "2D observation in 3D problem")
 
             pose_edge_id = pose_edge_id + 1;
@@ -192,7 +232,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             % Store the range measurement precision
             variance = variance * 5;
             range_precision{range_edge_id} = 1 / variance;
-            
+
 
         else
             error('Unrecognized token in file: %s', token);
@@ -201,6 +241,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
 
         read_line = fgets(fid);
     end
+
 
     % Construct and return pose_measurements struct
     pose_measurements.edges = pose_edges;
@@ -214,25 +255,19 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
     range_measurements.range = ranges;
     range_measurements.precision = range_precision;
 
+    % Construct and return landmark_priors struct
+    landmark_priors.names = landmark_prior_names;
+    landmark_priors.mean = landmark_prior_means;
+    landmark_priors.precision = landmark_prior_precisions;
+
+    % Construct and return pose_priors struct
+    pose_priors.names = pose_prior_names;
+    pose_priors.mean = pose_prior_means;
+    pose_priors.precision = pose_prior_precisions;
+
     % Construct and return var_idx_mapping struct
     num_pose_vars = length(pose_var_names);
     num_landmarks = length(landmark_names);
-
-    % make sure none of the names are repeated between the two sets
-    assert(isempty(intersect(pose_var_names, landmark_names)), "Variable names are not unique")
-
-    % set up the mapping from variable names to indices
-    if isempty(pose_var_names)
-        var_idx_mapping.pose_var_name_to_cnt = containers.Map();
-    else
-        var_idx_mapping.pose_var_name_to_cnt = containers.Map(pose_var_names, 1:num_pose_vars);
-    end
-
-    if isempty(landmark_names)
-        var_idx_mapping.landmark_name_to_cnt = containers.Map();
-    else
-        var_idx_mapping.landmark_name_to_cnt = containers.Map(landmark_names, 1:num_landmarks);
-    end
 
     % fill measurements struct
     measurements.pose_measurements = pose_measurements;
@@ -254,6 +289,25 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
     true_vals.true_rots = true_rots;
     true_vals.true_pose_translations = true_pose_translations;
     true_vals.true_landmarks = true_landmarks;
+
+    % make sure none of the names are repeated between the two sets
+    assert(isempty(intersect(pose_var_names, landmark_names)), "Variable names are not unique")
+
+
+    % set up the mapping from variable names to indices
+    if isempty(pose_var_names)
+        var_idx_mapping.pose_var_name_to_cnt = containers.Map();
+    else
+        var_idx_mapping.pose_var_name_to_cnt = containers.Map(pose_var_names, 1:num_pose_vars);
+    end
+
+    if isempty(landmark_names)
+        var_idx_mapping.landmark_name_to_cnt = containers.Map();
+    else
+        var_idx_mapping.landmark_name_to_cnt = containers.Map(landmark_names, 1:num_landmarks);
+    end
+
+
 
 end
 
