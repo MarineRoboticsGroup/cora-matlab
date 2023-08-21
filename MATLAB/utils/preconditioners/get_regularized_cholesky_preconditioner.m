@@ -1,5 +1,5 @@
 function precon_function = get_regularized_cholesky_preconditioner(Q, condition_number_ub)
-    [~, neg_greatest_eigval] = get_saddle_escape_direction(-Q);
+    [~, neg_greatest_eigval] = get_saddle_escape_kdirection(-Q);
     if neg_greatest_eigval > 0
         error('Failed to compute the greatest eigenvalue of the data matrix Q, should be negative')
     end
