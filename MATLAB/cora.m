@@ -1,9 +1,17 @@
-function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem, Manopt_opts)
+function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, Manopt_opts, preconditioner_type)
 
     % assert that 2 args are given
     if nargin < 2
         error('requires 2 arguments: problem and Manopt_opts');
     end
+
+    % if preconditioner_type is not given, default to "jacobi"
+    if nargin < 3
+        % supported_types = {'block_jacobi', 'ilu', 'ichol',...
+        % 'jacobi', 'regularized_cholesky'};
+        preconditioner_type = "jacobi";
+    end
+
 
 
     %%%%%% general problem info
@@ -30,19 +38,11 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
     problem.ehess = @ehess;
 
     fprintf("Setting up preconditioner...\n")
-    if problem.use_marginalized
-        [L, LT] = get_regularized_cholesky_preconditioner(problem.Qmain, 1e4);
-        % [L, LT] = get_ichol_preconditioner(problem.Qmain);
-    else
-        [L, LT] = get_regularized_cholesky_preconditioner(problem.Q, 1e4);
-        % [L, LT] = get_ichol_preconditioner(problem.Q);
-    end
-    problem.L = L;
-    problem.LT = LT;
-
-    %%%%%% problem info - unique to lifted dimension
-
-    base_dim = problem.dim;
+    precon_opts = struct();
+    precon_opts.type = preconditioner_type;
+    precon_opts.condition_number_ub = 1e4;
+    precon_opts.block_size = problem.dim;
+    problem.precon_function = precon_function_factory(problem, precon_opts);
 
     % check Manopt_opts.init to see if it is "odom", or "gt"
     if Manopt_opts.init == "odom"
@@ -61,7 +61,7 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
 
     % if we know there are no loop closures and we're randomly initializing then
     % let's skip a few dimensions higher (from experience)
-    lifted_dim = base_dim; % start out by lifting some dimensions
+    lifted_dim = problem.dim; % start out by lifting some dimensions
 
     cora_iterates_info = [];
     soln_is_optimal = false;
@@ -101,42 +101,46 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         end
     end
 
-    fprintf("The staircase algorithm has found an optimal solution with dimension %d.\n", lifted_dim);
+    fprintf("The staircase algorithm has found an optimal solution with dimension %d and cost %f.\n", lifted_dim, Fval_lifted);
     fprintf("Singular values of lifted solution are: %s \n", mat2str(svd(Xlift)));
 
     % print the rank, singular values, and cost of the solution
-    if Manopt_opts.verbosity > 0
-        fprintf("Lifted solution has rank %d\n", rank(Xlift));
-        fprintf("Cost of lifted solution is %f\n", Fval_lifted);
-    end
+    certified_lower_bound = Fval_lifted;
 
     if size(Xlift, 2) == problem.dim
         X = Xlift;
-        final_soln_optimal = true;
+        final_soln_cost = certified_lower_bound;
         fprintf("Problem was solved at the base dimension, no rounding and refinement needed.\n")
     else
         [X, Fval_base_dim, soln_manopt_info] = round_lifted_solution_and_refine(Xlift, problem, Manopt_opts);
+        fprintf("Refined cost is %f\n", Fval_base_dim);
         cora_iterates_info = [cora_iterates_info, soln_manopt_info];
-        gap = Fval_base_dim - Fval_lifted;
-        rel_suboptimality = gap / Fval_base_dim;
-        if gap < 1e-5
+        final_soln_cost = Fval_base_dim;
+        gap = final_soln_cost - certified_lower_bound;
+        rel_suboptimality = gap / certified_lower_bound;
+        if gap < -1e-5
+            warning("Suboptimality gap is negative - something is wrong. Gap is %f", gap);
+        elseif gap < 1e-5
             warning("Final solution is optimal");
-            final_soln_optimal = true;
         else
-            % print the gap between the final solution and the optimal solution
             warning("Gap between final solution and optimal solution is %f", gap);
             warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
-            final_soln_optimal = false;
         end
+
     end
+
+    optimality_info.certified_lower_bound = certified_lower_bound;
+    optimality_info.final_soln_cost = final_soln_cost;
 end
 
 function [X, Fval_base_dim, soln_manopt_info] = round_lifted_solution_and_refine(Xlift, problem, Manopt_opts)
     Xround = round_solution(Xlift, problem, Manopt_opts.verbosity);
+    assert(check_value_is_valid(problem, Xround))
 
     % refine the rounded solution with one last optimization
     add_noise_to_pt = false;
     [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, problem.dim, Xround', Manopt_opts, add_noise_to_pt, [], []);
+    assert(check_value_is_valid(problem, X))
 
     % print the rank, singular values, and cost of the solution
     if Manopt_opts.verbosity > 0

@@ -19,7 +19,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
     %      of the translational part of the kth measurement.
     %
     %
-
+    fprintf('Reading data from %s\n', pyfg_fpath)
 
     fid = fopen(pyfg_fpath, 'r');
 
@@ -115,9 +115,9 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             assert(~ismember(var_name, landmark_prior_names), "Duplicate landmark prior")
 
             % Store the landmark prior
-            landmark_prior_names = [landmark_prior_names; var_name];
-            landmark_prior_means = [landmark_prior_means, [lx; ly]];
-            landmark_prior_precisions = [landmark_prior_precisions, 1/C11];
+            % landmark_prior_names = [landmark_prior_names; var_name];
+            % landmark_prior_means = [landmark_prior_means, [lx; ly]];
+            % landmark_prior_precisions = [landmark_prior_precisions, 1/C11];
 
         elseif(strcmp(token, 'EDGE_SE3:QUAT'))
             % 3D Measurement
@@ -233,7 +233,8 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             variance = variance * 5;
             range_precision{range_edge_id} = 1 / variance;
 
-
+        elseif(strcmp(token, 'VERTEX_SE2:PRIOR'))
+            warning('VERTEX_SE2:PRIOR not implemented yet');
         else
             error('Unrecognized token in file: %s', token);
 

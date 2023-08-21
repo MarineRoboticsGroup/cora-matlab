@@ -8,6 +8,10 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     %  manopt_info: the info struct returned by manopt
     %  Manopt_opts: the options struct used by manopt
 
+    % init point should be tall and skinny
+    if ~isempty(init_point)
+        assert(size(init_point, 1) > size(init_point, 2));
+    end
 
     if problem.use_marginalized
         M = MarginalizedRaSlamManifoldFactory(problem, lifted_dim);
@@ -17,17 +21,18 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     end
     problem.M = M;
 
-    % use incomplete Cholesky preconditioner
-    function [u, store] = preconditioner(X, U, store, ~, mani, L, LT)
-        u = LT \ (L \ U);
+    % set preconditioner
+    function [u, store] = preconditioner(X, U, store, prob, mani)
+        u = prob.precon_function(U);
         u = mani.tangent(X, u);
     end
-
-    problem.precon = @(X, U, store) preconditioner(X, U, store, problem, M, problem.L, problem.LT);
+    problem.precon = @(X, U, store) preconditioner(X, U, store, problem, M);
 
     % if init_point is [], then get a random point from M
     if isempty(init_point)
         X0 = M.rand();
+    elseif (size(init_point, 2) == lifted_dim)
+        X0 = init_point;
     else
         X0 = lift_init_point(problem, init_point, M, add_noise, perturbation, second_order_descent_val, Manopt_opts.tolgradnorm);
     end

@@ -25,21 +25,21 @@ function Manopt_opts = get_manopt_opts(Manopt_opts)
     if isfield(Manopt_opts, 'tolgradnorm')
         fprintf(' Stopping tolerance for norm of Riemannian gradient: %g\n', Manopt_opts.tolgradnorm);
     else
-        Manopt_opts.tolgradnorm = 1e-3;
+        Manopt_opts.tolgradnorm = 1;
         fprintf(' Setting stopping tolerance for norm of Riemannian gradient to: %g [default]\n', Manopt_opts.tolgradnorm);
     end
 
     if isfield(Manopt_opts, 'rel_func_tol')
         fprintf(' Stopping tolerance for relative function decrease: %g\n', Manopt_opts.rel_func_tol);
     else
-        Manopt_opts.rel_func_tol = 1e-2;
+        Manopt_opts.rel_func_tol = 1e-1;
         fprintf(' Setting stopping tolerance for relative function decrease to: %g [default]\n', Manopt_opts.rel_func_tol);
     end
 
     if isfield(Manopt_opts, 'maxinner')
         fprintf(' Maximum number of Hessian-vector products to evaluate in each truncated Newton iteration: %d\n', Manopt_opts.maxinner);
     else
-        Manopt_opts.maxinner = 1000;
+        Manopt_opts.maxinner = 300;
         fprintf(' Setting maximum number of Hessian-vector products to evaluate in each truncated Newton iteration to: %d [default]\n', Manopt_opts.maxinner);
     end
 
@@ -53,7 +53,7 @@ function Manopt_opts = get_manopt_opts(Manopt_opts)
     if isfield(Manopt_opts, 'maxiter')
         fprintf(' Maximum number of trust-region iterations: %d\n', Manopt_opts.maxiter);
     else
-        Manopt_opts.maxiter = 300;
+        Manopt_opts.maxiter = 100;
         fprintf(' Setting maximum number of trust-region iterations to: %d [default]\n', Manopt_opts.maxiter);
     end
 
@@ -77,7 +77,7 @@ function Manopt_opts = get_manopt_opts(Manopt_opts)
     % decrease in function value between successive iterates drops below the
     % threshold specified in SE_Sync_opts.relative_func_decrease_tol
     if(strcmp(solver_name, 'trustregions'))
-        Manopt_opts.stopfun = @(manopt_problem, x, info, last) relative_func_decrease_stopfun(manopt_problem, x, info, last, Manopt_opts.rel_func_tol);
+        Manopt_opts.stopfun = @(manopt_problem, x, info, last) relative_func_decrease_stopfun(manopt_problem, x, info, last, Manopt_opts.rel_func_tol, Manopt_opts.tolgradnorm);
     end
 
     % Log the sequence of iterates visited by the Riemannian Staircase

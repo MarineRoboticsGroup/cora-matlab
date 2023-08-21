@@ -4,7 +4,7 @@ function [new_pt, linesearch_success] = retract_along_direction_with_linesearch(
     % search_dir and pt must have same number of rows
     [nrows_pt, ncols_pt] = size(pt);
     [nrows_search_dir, ncols_search_dir] = size(search_dir);
-    assert(nrows_pt == nrows_search_dir);
+    assert(nrows_pt == nrows_search_dir, sprintf('search_dir and pt must have same number of rows. search_dir has %d rows, pt has %d rows', nrows_search_dir, nrows_pt));
 
     % if ncols_search_dir is one, left pad it with zero columns
     if ncols_search_dir == 1 && ncols_pt > 1
@@ -14,7 +14,7 @@ function [new_pt, linesearch_success] = retract_along_direction_with_linesearch(
     % set the minimum and initial stepsize
     typical_dist = problem.M.typicaldist();
     alpha_min = typical_dist * 1e-7;
-    alpha = typical_dist * 1e-2;
+    alpha = typical_dist * 10;
 
     % Vectors of trial stepsizes and corresponding function values
     alphas = [];
@@ -78,10 +78,13 @@ function [new_pt, linesearch_success] = retract_along_direction_with_linesearch(
         % return success
         new_pt = problem.M.retr(pt, search_dir, amin);
         linesearch_success = true;
+        cost_diff = cost - fmin;
+        fprintf("Succesful line search with step size %f reduced cost by %f\n", amin, cost_diff);
     else
         % NO trial point decreased the objective value: we were unable to escape
         % the saddle point!
         new_pt = pt;
         linesearch_success = false;
+        fprintf("Unsuccesful line search. No step size reduced cost\n");
     end
 end

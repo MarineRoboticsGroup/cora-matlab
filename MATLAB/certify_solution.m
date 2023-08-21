@@ -50,15 +50,11 @@ function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, ve
     end
 
     % set is_opt to true if we can cholesky factorize S
-    % iterate from 1e-10, 1e-9, ...
-    for i = -5:-5
-        beta = 10^(i);
-        is_opt = testPSDofMat(S, beta);
-        if is_opt
-            if verbose
-                fprintf("Solution certified with beta = %d \n", beta);
-            end
-            break
+    beta = 1e-5;
+    is_opt = testPSDofMat(S, beta);
+    if is_opt
+        if verbose
+            fprintf("Solution certified with beta = %d \n", beta);
         end
     end
 
@@ -75,8 +71,8 @@ function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, ve
         end
 
         % get minimum eigenvector of S, which is real and symmetric (Hermitian)
-        [min_eigvec, min_eigval, not_converged] = get_saddle_escape_direction(S);
-        if not_converged
+        [min_eigvec, min_eigval] = get_saddle_escape_direction(S);
+        if min_eigval > 0
             warning("Saddle escape search did not converge");
             min_eigvec = [];
             min_eigval = [];

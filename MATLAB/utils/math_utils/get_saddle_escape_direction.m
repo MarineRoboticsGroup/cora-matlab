@@ -1,4 +1,4 @@
-function [least_eigvec, least_eigval, not_converged] = get_saddle_escape_direction(S)
+function [least_eigvec, least_eigval] = get_saddle_escape_direction(S)
     % using strategy from Rosen, "Accelerating Certifiable Estimation with
     % Preconditioned Eigensolvers"
     n = size(S,1);
@@ -62,6 +62,5 @@ function [least_eigvec, least_eigval, not_converged] = get_saddle_escape_directi
 
     least_eigvec = block_eigvecs(:, 1);
     least_eigval = eigvals(1);
-    not_converged = least_eigval > 0;
 
 end

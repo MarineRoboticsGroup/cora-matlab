@@ -1,4 +1,4 @@
-function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
+function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
     %{
     Parses a pyfg text file into a problem struct.
 
@@ -17,14 +17,20 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
     %}
     % make sure the file exists
     assert(exist(pyfg_fpath, 'file') == 2, 'File does not exist: %s', pyfg_fpath);
-    assert(nargin == 2, 'Must provide use_marginalized flag as second argument.')
+    assert(nargin >= 2, 'Must provide use_marginalized flag as second argument.')
+
+    if nargin < 3
+        verbose = false;
+    end
 
     problem.use_marginalized = use_marginalized;
 
-    if use_marginalized
-        fprintf('Using marginalized product.\n');
-    else
-        fprintf('Not using marginalized product.\n');
+    if verbose
+        if use_marginalized
+            fprintf('Using marginalized product.\n');
+        else
+            fprintf('Not using marginalized product.\n');
+        end
     end
 
     %%%%% Parse the file %%%%%
@@ -32,7 +38,9 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
     % [pose_measurements, range_measurements, var_idx_mapping, dim, true_rots, true_pose_translations, true_landmarks] = get_pyfg_data(pyfg_fpath);
     [measurements, var_idx_mapping, dim, true_vals] = get_pyfg_data(pyfg_fpath);
     load_data_time = toc;
-    fprintf('Finished loading data in %f seconds.\n', load_data_time);
+    if verbose
+        fprintf('Finished loading data in %f seconds.\n', load_data_time);
+    end
 
     if measurements_have_priors(measurements)
         error('Priors are not currently supported.');
@@ -41,8 +49,8 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
     % [pose_measurements, range_measurements, var_idx_mapping, dim, true_rots, true_pose_translations, true_landmarks] = get_pyfg_data(pyfg_fpath);
     pose_measurements = measurements.pose_measurements;
     range_measurements = measurements.range_measurements;
-    problem.num_pose_priors = length(measurements.pose_priors);
-    problem.num_landmark_priors = length(measurements.landmark_priors);
+    pose_priors = measurements.pose_priors;
+    landmark_priors = measurements.landmark_priors;
 
     true_rots = true_vals.true_rots;
     true_pose_translations = true_vals.true_pose_translations;
@@ -81,14 +89,18 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
     assert(size(Lrho, 1) == problem.num_poses * dim);
     assert(size(Lrho, 2) == problem.num_poses * dim);
     con_lap_time = toc;
-    fprintf('Finished constructing connection Laplacian in %f seconds.\n', con_lap_time);
+    if verbose
+        fprintf('Finished constructing connection Laplacian in %f seconds.\n', con_lap_time);
+    end
 
     tic;
     Apose = construct_pose_incidence_matrix(pose_measurements, var_idx_mapping);
     assert(size(Apose, 1) == problem.num_rel_pose_measurements);
     assert(size(Apose, 2) == problem.num_poses);
     incidence_time = toc;
-    fprintf('Finished constructing incidence matrix in %f seconds.\n', incidence_time);
+    if verbose
+        fprintf('Finished constructing incidence matrix in %f seconds.\n', incidence_time);
+    end
 
     tic;
     [T, Omega] = construct_translational_matrices(pose_measurements, var_idx_mapping);
@@ -97,13 +109,17 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
     assert(size(Omega, 1) == problem.num_rel_pose_measurements);
     assert(size(Omega, 2) == problem.num_rel_pose_measurements);
     translational_time = toc;
-    fprintf('Finished constructing translational matrices in %f seconds.\n', translational_time);
+    if verbose
+        fprintf('Finished constructing translational matrices in %f seconds.\n', translational_time);
+    end
 
     tic;
     V = Apose' * Omega * T;
     V_time = toc;
     problem.V = V;
-    fprintf('Finished constructing V matrix in %f seconds.\n', V_time);
+    if verbose
+        fprintf('Finished constructing V matrix in %f seconds.\n', V_time);
+    end
 
     problem.Lrho = Lrho;
     problem.Apose = Apose;
@@ -120,7 +136,9 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
     assert(size(D, 1) == problem.num_range_measurements);
     assert(size(D, 2) == problem.num_range_measurements);
     incidence_time = toc;
-    fprintf('Finished constructing range matrices A, D, and W in %f seconds.\n', incidence_time);
+    if verbose
+        fprintf('Finished constructing range matrices A, D, and W in %f seconds.\n', incidence_time);
+    end
 
     problem.Arange = Arange;
     problem.W = W;
@@ -183,7 +201,9 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized)
         problem.LeftOperatorRed = problem.LeftOperator(:, 1:end-1);
         problem.LtransCholRed = chol(Ltrans(1:end-1, 1:end-1), 'lower');
         marginalized_prod_time = toc;
-        fprintf('Finished constructing matrices for marginalized product in %f seconds.\n', marginalized_prod_time);
+        if verbose
+            fprintf('Finished constructing matrices for marginalized product in %f seconds.\n', marginalized_prod_time);
+        end
     end
 
     if use_marginalized
@@ -224,7 +244,11 @@ function [rotations, translations] = get_X_odom(pose_measurements, true_vals, va
     translations = [];
     num_previous_odom_measures = 0;
     num_robots = get_num_robots_from_var_idx_map(var_idx_mapping);
-    robot_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+
+    % all letters but L
+    robot_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", ...
+                   "K", "M", "N", "O", "P", "Q", "R", "S", "T", ...
+                   "U", "V", "W", "X", "Y", "Z"];
     for robot_idx = 1:num_robots
         robot_i_name = robot_names(robot_idx);
         robot_i_pose_vars = pose_var_names(startsWith(pose_var_names, robot_i_name));
@@ -261,11 +285,9 @@ function [rotations, translations] = get_X_odom(pose_measurements, true_vals, va
             translations = [translations, current_T(1:dim, end)];
 
         end
-        fprintf('Finished robot %s\n', robot_i_name);
         num_previous_odom_measures = num_previous_odom_measures + num_odom_measures;
 
     end
-    disp("done");
 
 end
 

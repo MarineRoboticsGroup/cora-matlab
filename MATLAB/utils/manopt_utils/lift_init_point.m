@@ -1,10 +1,6 @@
 % get the initialization
 function lifted_init = lift_init_point(problem, X, lifted_manifold, add_noise, saddle_escape_dir, ~, tolgradnorm)
 
-    % warning("Blanket ignoring saddle escape directions!")
-    saddle_escape_dir = [];
-    add_noise = true;
-
     % require that all arguments are given
     if nargin < 6
         error('lift_init_point requires at least %d arguments but was given %d ', expected_nargin, nargin);
@@ -38,12 +34,15 @@ function lifted_init = lift_init_point(problem, X, lifted_manifold, add_noise, s
         % fundamentals of manifold optimization) that we will not be able to
         % estimate a higher rank point
         saddle_escape_dir = rand(size(lifted_init));
+    else
+        error('lift_init_point: either saddle_escape_dir or add_noise must be true');
     end
 
-    if add_noise || ~isempty(saddle_escape_dir)
-        % if we have a saddle_escape_dir, treat it as a tangent vector and retract
-        lifted_init = lifted_manifold.retr(lifted_init, saddle_escape_dir, 1e-2);
-        % [lifted_init, search_success] = retract_along_direction_with_linesearch(problem, tolgradnorm, lifted_init, saddle_escape_dir);
+    [lifted_init, search_success] = retract_along_direction_with_linesearch(problem, tolgradnorm, lifted_init, saddle_escape_dir);
+    if ~search_success
+        warning('Adding noise to lifted_init because linesearch retraction failed')
+        rand_noise = rand(size(lifted_init));
+        lifted_init = lifted_init + rand_noise;
     end
 
     % randomly apply a rotation to the lifted point to fill the zero entries
