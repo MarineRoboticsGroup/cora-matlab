@@ -34,13 +34,10 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
     end
 
     %%%%% Parse the file %%%%%
-    tic;
-    % [pose_measurements, range_measurements, var_idx_mapping, dim, true_rots, true_pose_translations, true_landmarks] = get_pyfg_data(pyfg_fpath);
+    tread_pyfg = tic;
     [measurements, var_idx_mapping, dim, true_vals] = get_pyfg_data(pyfg_fpath);
-    load_data_time = toc;
-    if verbose
-        fprintf('Finished loading data in %f seconds.\n', load_data_time);
-    end
+    load_data_time = toc(tread_pyfg);
+    fprintf('Finished loading data in %f seconds.\n', load_data_time);
 
     if measurements_have_priors(measurements)
         error('Priors are not currently supported.');
@@ -84,42 +81,22 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
     problem.X_odom(problem.all_t_idxs, :) = odom_translations';
 
     %%%%% Pose Graph Component %%%%%
-    tic;
     Lrho = construct_connection_Laplacian(pose_measurements, var_idx_mapping);
     assert(size(Lrho, 1) == problem.num_poses * dim);
     assert(size(Lrho, 2) == problem.num_poses * dim);
-    con_lap_time = toc;
-    if verbose
-        fprintf('Finished constructing connection Laplacian in %f seconds.\n', con_lap_time);
-    end
 
-    tic;
     Apose = construct_pose_incidence_matrix(pose_measurements, var_idx_mapping);
     assert(size(Apose, 1) == problem.num_rel_pose_measurements);
     assert(size(Apose, 2) == problem.num_poses);
-    incidence_time = toc;
-    if verbose
-        fprintf('Finished constructing incidence matrix in %f seconds.\n', incidence_time);
-    end
 
-    tic;
     [T, Omega] = construct_translational_matrices(pose_measurements, var_idx_mapping);
     assert(size(T, 1) == problem.num_rel_pose_measurements);
     assert(size(T, 2) == problem.num_poses * dim);
     assert(size(Omega, 1) == problem.num_rel_pose_measurements);
     assert(size(Omega, 2) == problem.num_rel_pose_measurements);
-    translational_time = toc;
-    if verbose
-        fprintf('Finished constructing translational matrices in %f seconds.\n', translational_time);
-    end
 
-    tic;
     V = Apose' * Omega * T;
-    V_time = toc;
     problem.V = V;
-    if verbose
-        fprintf('Finished constructing V matrix in %f seconds.\n', V_time);
-    end
 
     problem.Lrho = Lrho;
     problem.Apose = Apose;
@@ -127,7 +104,6 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
     problem.T = T;
 
     %%%%% Range Component %%%%%
-    tic;
     [Arange, W, D] = construct_range_graph_matrices(range_measurements, var_idx_mapping);
     assert(size(Arange, 1) == problem.num_range_measurements);
     assert(size(Arange, 2) == problem.num_poses + problem.num_landmarks);
@@ -135,10 +111,6 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
     assert(size(W, 2) == problem.num_range_measurements);
     assert(size(D, 1) == problem.num_range_measurements);
     assert(size(D, 2) == problem.num_range_measurements);
-    incidence_time = toc;
-    if verbose
-        fprintf('Finished constructing range matrices A, D, and W in %f seconds.\n', incidence_time);
-    end
 
     problem.Arange = Arange;
     problem.W = W;
@@ -148,13 +120,15 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
     Sigma = T' * Omega * T;
     problem.Sigma = Sigma;
 
-    % range graph laplacian
-    Lrange = Arange' * W * Arange;
-    problem.Lrange = Lrange;
+    % range graph laplacians
+    LrangeDist = W * D * D;
+    LrangeTrans = Arange' * W * Arange;
+    problem.LrangeDist = LrangeDist;
+    problem.LrangeTrans = LrangeTrans;
 
     % translation graph laplacian, embedded in the range graph laplacian space
     Ltau = Apose' * Omega * Apose;
-    Ltau = zeroPadSparseSquareMatrix(Ltau, size(Lrange, 1));
+    Ltau = zeroPadSparseSquareMatrix(Ltau, size(LrangeTrans, 1));
     problem.Ltau = Ltau;
 
     % some zero matrices for padding
@@ -165,12 +139,14 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
     ZeroL = sparse(dim*n, l);
 
     Lrot = Lrho + Sigma;
-    Ltrans = Ltau + Lrange;
+    Ltrans = Ltau + LrangeTrans;
     paddedVT = [V', ZeroL];
     Q = [Lrot,                      ZeroRange,                   paddedVT;
-         ZeroRange',                     W * D * D,              D * W * Arange;
+         ZeroRange',                     LrangeDist,              D * W * Arange;
          paddedVT',               Arange' * W * D,        Ltrans];
     problem.Q = Q;
+    problem.QmargPrecon = [   Lrho ,              ZeroRange,      ;
+                            ZeroRange',                     W * D * D ];
 
     if use_marginalized
 
@@ -186,7 +162,6 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
 
             To efficiently compute inv(Ltrans) * X, we use the Cholesky decomposition
         %}
-        tic;
         problem.Qmain = [   Lrho + Sigma,              ZeroRange,      ;
                             ZeroRange',                     W * D * D ];
 
@@ -200,10 +175,6 @@ function problem = parse_pyfg_text(pyfg_fpath, use_marginalized, verbose)
         % the reduced version of the left operator is the same as the full one, but without the last column
         problem.LeftOperatorRed = problem.LeftOperator(:, 1:end-1);
         problem.LtransCholRed = chol(Ltrans(1:end-1, 1:end-1), 'lower');
-        marginalized_prod_time = toc;
-        if verbose
-            fprintf('Finished constructing matrices for marginalized product in %f seconds.\n', marginalized_prod_time);
-        end
     end
 
     if use_marginalized

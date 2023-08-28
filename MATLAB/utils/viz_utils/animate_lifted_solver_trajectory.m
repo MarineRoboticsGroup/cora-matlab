@@ -80,11 +80,11 @@ function animate_lifted_solver_trajectory(problem_data, cora_iterates_info, show
     % get a different color for each robot
     colors = lines(num_robots);
     for robot_idx = 1:num_robots
-        robot_t_idxs{robot_idx} = get_robot_t_idxs(problem_data, problem_data.all_t_idxs, robot_idx);
+        robot_t_idxs{robot_idx} = get_robot_t_idxs(problem_data,  robot_idx);
         if show_gt
             % plot gt trajectory as black dashed line with line width 1
             if problem_data.use_marginalized
-                gt_t_idxs = get_robot_t_idxs(problem_data, problem_data.all_t_idxs, robot_idx);
+                gt_t_idxs = get_robot_t_idxs(problem_data,  robot_idx);
                 plot(gt_vals(1, gt_t_idxs), gt_vals(2, gt_t_idxs), '-', 'Color', gt_color, 'LineWidth', 1);
             else
                 plot(gt_vals(1, robot_t_idxs{robot_idx}), gt_vals(2, robot_t_idxs{robot_idx}), '-', 'Color', gt_color, 'LineWidth', 1);

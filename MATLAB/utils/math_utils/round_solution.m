@@ -38,10 +38,9 @@ function rounded_soln = round_solution(X, problem, verbosity, dim)
         );
 
         rounded_soln(:, rot_i_idxs) = rot_i;
-        determinants(i+1) = det(S);
+        determinants(i+1) = det(rot_i);
         % determinant should be 1 or -1, but we allow for some numerical error
-        assert((abs(determinants(i+1)) - 1) < 1e-6), ...
-            sprintf('Determinant of rotation %d is %f, should be 1 or -1\n', ...
+        assert((abs(determinants(i+1)) - 1) < 1e-6, 'Determinant of rotation %d is %f, should be 1 or -1\n', ...
             i, determinants(i+1));
     end
 

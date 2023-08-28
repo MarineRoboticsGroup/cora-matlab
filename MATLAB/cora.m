@@ -7,9 +7,7 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
 
     % if preconditioner_type is not given, default to "jacobi"
     if nargin < 3
-        % supported_types = {'block_jacobi', 'ilu', 'ichol',...
-        % 'jacobi', 'regularized_cholesky'};
-        preconditioner_type = "jacobi";
+        preconditioner_type = "block_cholesky";
     end
 
 
@@ -41,7 +39,7 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
     precon_opts = struct();
     precon_opts.type = preconditioner_type;
     precon_opts.condition_number_ub = 1e4;
-    precon_opts.block_size = problem.dim;
+    precon_opts.block_size = problem.dim+2;
     problem.precon_function = precon_function_factory(problem, precon_opts);
 
     % check Manopt_opts.init to see if it is "odom", or "gt"
@@ -59,9 +57,8 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
         init_point = init_point(1: marginalized_dim, :);
     end
 
-    % if we know there are no loop closures and we're randomly initializing then
-    % let's skip a few dimensions higher (from experience)
-    lifted_dim = problem.dim; % start out by lifting some dimensions
+    % we can start out by lifting some dimensions if we want
+    lifted_dim = problem.dim;
 
     cora_iterates_info = [];
     soln_is_optimal = false;
@@ -72,7 +69,8 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
         % solve the lifted problem and try to certify it
         fprintf("Trying to solve at rank %d\n", lifted_dim);
         [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts, add_noise_to_lifted_pt, min_eigvec, min_eigval);
-        [soln_is_optimal, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity);
+        certEpsilon = Fval_lifted * 1e-6;
+        [soln_is_optimal, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity, certEpsilon);
 
         % Xlift should be tall and skinny
         assert(size(Xlift, 1) > size(Xlift, 2));
@@ -118,10 +116,10 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
         final_soln_cost = Fval_base_dim;
         gap = final_soln_cost - certified_lower_bound;
         rel_suboptimality = gap / certified_lower_bound;
-        if gap < -1e-5
-            warning("Suboptimality gap is negative - something is wrong. Gap is %f", gap);
-        elseif gap < 1e-5
+        if abs(rel_suboptimality) < 0.01
             warning("Final solution is optimal");
+        elseif gap < 0
+            warning("Suboptimality gap is negative - something is wrong. Gap is %f", gap);
         else
             warning("Gap between final solution and optimal solution is %f", gap);
             warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");

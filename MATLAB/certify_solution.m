@@ -1,6 +1,9 @@
-function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, verbose)
-    if verbose
-        tic
+function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, verbose, certEpsilon)
+    if nargin < 3
+        verbose = false;
+    end
+    if nargin < 4
+        certEpsilon = 1e-5;
     end
 
     % set up the problem
@@ -42,56 +45,53 @@ function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, ve
 
     % unstack the columns of the weighted constraints
     weighted_constraints = reshape(weighted_constraints, block_height, []);
-
     if problem_data.use_marginalized
-        S = weighted_constraints + problem_data.Qmain;
+        S = problem_data.Q;
+        S(1:block_height, 1:block_height) = S(1:block_height, 1:block_height) + weighted_constraints;
     else
-        S = weighted_constraints + problem_data.Q;
+        S = weighted_constraints + problem_data.Q ;
     end
+    S = S + (certEpsilon * speye(size(S)));
 
     % set is_opt to true if we can cholesky factorize S
-    beta = 1e-5;
-    is_opt = testPSDofMat(S, beta);
+    % is_opt = testPSDofMat(S);
+    % warning("Disabled saddle escape search");
+    % min_eigvec = [];
+    % min_eigval = [];
+    % is_opt = testPSDofMat(S);
+
+    if ~problem_data.use_marginalized
+        [min_eigvec, min_eigval] = get_saddle_escape_direction(S, X);
+    else
+        [min_eigvec, min_eigval] = get_saddle_escape_direction(S);
+    end
+    is_opt = min_eigval >= 0;
+    is_opt = testPSDofMat(S);
     if is_opt
+        fprintf("Solution certified with certEpsilon = %d \n", certEpsilon);
+    else
         if verbose
-            fprintf("Solution certified with beta = %d \n", beta);
-        end
-    end
-
-    % time for certification
-    if verbose
-        cert_time = toc;
-        fprintf("Certification took %f seconds \n", cert_time);
-    end
-
-    if ~is_opt
-        if verbose
-            fprintf("Not certified after beta of %d \n", beta);
-            tic;
+            fprintf("Not certified after certEpsilon of %d \n", certEpsilon);
         end
 
         % get minimum eigenvector of S, which is real and symmetric (Hermitian)
-        [min_eigvec, min_eigval] = get_saddle_escape_direction(S);
+        % [min_eigvec, min_eigval] = get_saddle_escape_direction(S);
         if min_eigval > 0
             warning("Saddle escape search did not converge");
             min_eigvec = [];
             min_eigval = [];
-        end
-        if verbose
-            saddle_time = toc;
-            fprintf("Saddle escape search took %f seconds \n", saddle_time);
+        elseif problem_data.use_marginalized
+            min_eigvec = min_eigvec(1:problem_data.block_size);
         end
     end
-
 end
 
-function isPSD = testPSDofMat(mat, reg_term)
+function isPSD = testPSDofMat(mat)
     try
-        chol(mat + reg_term * speye(size(mat)));
+        chol(mat);
         isPSD = true;
     catch
         isPSD = false;
     end
-
 end
 
