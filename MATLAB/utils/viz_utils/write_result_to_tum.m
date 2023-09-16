@@ -1,31 +1,29 @@
 function write_result_to_tum(X, problem_data, save_dir)
 
-    % if X is tall and skinny, transpose it
-    if size(X, 1) > size(X, 2)
-        X = X';
+    if (problem_data.use_marginalized)
+        Xfull = extract_translations_from_marginalized_solution(X, problem_data);
+    else
+        Xfull = X;
     end
 
-    has_priors = (problem_data.num_pose_priors + problem_data.num_beacon_priors) > 0;
-    has_priors = int64(has_priors);
+    % if X is tall and skinny, transpose it
+    if size(Xfull, 1) > size(Xfull, 2)
+        Xfull = Xfull';
+    end
+
+    warning("Function does not currently correctly handle priors!!")
+    % has_priors = (problem_data.num_pose_priors + problem_data.num_landmark_priors) > 0;
+    has_priors = 0;
+
     dim = problem_data.dim;
 
     num_robot_poses = problem_data.num_poses-has_priors; %remove the aux pose
     num_robots = problem_data.num_robots;
+    assert(mod(num_robot_poses, num_robots) == 0, 'Number of robot poses (%f) must be divisible by number of robots (%f)', num_robot_poses, num_robots);
     poses_per_robot = num_robot_poses / num_robots;
-    robot_poses_idx_length = poses_per_robot * (dim+1);
+    num_rot_idxs_per_robot = poses_per_robot * dim;
 
     if num_robots > 0
-        assert(mod(num_robot_poses, num_robots) == 0);
-
-        skip_aux_pose_offset = has_priors * (dim+1);
-
-        robot_pose_start_idx = 1 + skip_aux_pose_offset;
-        last_pose_idx = num_robot_poses * (dim+1) + skip_aux_pose_offset;
-
-        all_robot_poses = X(:, robot_pose_start_idx:last_pose_idx);
-        trans_idxs = dim+1:dim+1:robot_poses_idx_length; % trans idxs for each robot
-        num_rot_idxs_per_robot = poses_per_robot * dim;
-        rot_idxs = problem_data.all_R_idxs(1:num_rot_idxs_per_robot);
 
         % make a list of the paths to save to, numbered by robot
         save_fpaths = save_dir + "/cora_" + string(1:num_robots) + ".tum";
@@ -36,13 +34,11 @@ function write_result_to_tum(X, problem_data, save_dir)
                 error('Cannot open file: %s', save_fpaths(robot_idx));
             end
 
-            robot_i_poses_start = (robot_idx-1)*robot_poses_idx_length+1;
-            robot_i_poses_end = robot_i_poses_start + robot_poses_idx_length-1;
-            robot_i_poses = all_robot_poses(:, robot_i_poses_start:robot_i_poses_end);
-            assert(length(robot_i_poses) == robot_poses_idx_length);
+            cur_robot_trans_idxs = get_robot_t_idxs(problem_data, robot_idx);
+            cur_robot_rot_idxs = get_robot_R_idxs(problem_data, robot_idx);
 
-            trans_i = robot_i_poses(:, trans_idxs);
-            rotations_i = robot_i_poses(:, rot_idxs);
+            trans_i = Xfull(:, cur_robot_trans_idxs);
+            rotations_i = Xfull(:, cur_robot_rot_idxs);
 
             % if problem_data.timestamps exists, use it
             % otherwise, use the default timestamps

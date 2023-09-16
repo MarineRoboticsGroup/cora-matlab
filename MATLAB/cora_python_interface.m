@@ -4,47 +4,58 @@
         problem_fpath, animation_show_gt, look_for_cached_soln, nargout=0
     )
 %}
-function cora_python_interface(problem_fpath, show_animation, animation_show_gt, look_for_cached_soln)
+function cora_python_interface(problem_fpath, show_animation, animation_show_gt, look_for_cached_soln, solve_marginalized_problem, save_iterates_info)
 
-    data_path = problem_fpath;
-    res_path = strrep(data_path, ".mat", "_results.mat");
-    cora_iterates_info_path = strrep(data_path, '.mat', '_cora_iterates_info.mat');
-    data_dir = fileparts(data_path);
-    exp_data = load_ra_slam_problem(data_path);
-
-    if look_for_cached_soln && exist(res_path, 'file') && exist(cora_iterates_info_path, 'file')
-        warning("Results already found for experiment %s ... skipping", data_path);
-        res = load(res_path);
-        X = res.results.X;
-        write_result_to_tum(X, exp_data, data_dir)
-        if show_animation
-            animate_lifted_solver_trajectory(data_path, animation_show_gt);
-        end
-        return
+    if ~exist('save_iterates_info', 'var')
+        save_iterates_info = true;
     end
 
-    exp_data = load_ra_slam_problem(data_path);
+    data_path = problem_fpath;
+    assert(endsWith(data_path, ".pyfg"), "data_path must be a .pyfg file");
 
-    % set the options for the solver
-    manopt_opts.init = "random";
-    manopt_opts.verbosity = 2;
-    manopt_opts.debug = 0;
-    manopt_opts = get_manopt_opts(manopt_opts);
+    res_path = strrep(data_path, ".pyfg", "_results.mat");
+    cora_iterates_info_path = strrep(data_path, ".pyfg", '_cora_iterates_info.mat');
+    data_dir = fileparts(data_path);
+    verbose_parsing = false;
 
-    % run the solver
-    [X, X_is_optimal, cora_iterates_info, ~] = cora(exp_data, manopt_opts);
+    if look_for_cached_soln && exist(res_path, 'file')
+        warning("Results already found for experiment %s ... skipping", data_path);
+        if show_animation && exist(cora_iterates_info_path, 'file')
+            prob = parse_pyfg_text(problem_fpath, solve_marginalized_problem, verbose_parsing);
+            cora_iterates_struct = load(cora_iterates_info_path);
+            cora_iterates_info = cora_iterates_struct.cora_iterates_info;
+            animate_lifted_solver_trajectory(prob, cora_iterates_info, animation_show_gt);
+        end
+        return
+    else
+        prob = parse_pyfg_text(problem_fpath, solve_marginalized_problem, verbose_parsing);
 
-    % values from the true final solution
-    res = struct();
-    res.X = X; % the final solution (rounded and refined)
-    res.X_is_certified = X_is_optimal;
+        % set the options for the solver
+        manopt_opts.init = "random";
+        manopt_opts.verbosity = 0;
+        manopt_opts.debug = 0;
+        manopt_opts = get_manopt_opts(manopt_opts);
 
-    % save the results and write to .tum format for comparison
-    save_experiment_results(res, cora_iterates_info, data_path);
-    write_result_to_tum(X, exp_data, data_dir)
+        % run the solver
+        [X, optimality_info, cora_iterates_info, ~] = cora(prob, manopt_opts, "block_cholesky");
 
-    % visualize the solution
-    if show_animation
-        animate_lifted_solver_trajectory(data_path, animation_show_gt);
+        % values from the true final solution
+        res = struct();
+        res.X = X; % the final solution (rounded and refined)
+        res.certified_lower_bound = optimality_info.certified_lower_bound;
+        res.final_soln_cost = optimality_info.final_soln_cost;
+
+        % save the results and write to .tum format for comparison
+        if save_iterates_info
+            save_experiment_results(data_dir, res, cora_iterates_info);
+        else
+            save_experiment_results(data_dir, res);
+        end
+        write_result_to_tum(X, prob, data_dir)
+
+        % visualize the solution
+        if show_animation
+            animate_lifted_solver_trajectory(prob, cora_iterates_info, animation_show_gt);
+        end
     end
 end

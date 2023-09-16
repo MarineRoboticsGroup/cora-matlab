@@ -1,40 +1,46 @@
-function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem, Manopt_opts)
+function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, Manopt_opts, preconditioner_type)
 
     % assert that 2 args are given
     if nargin < 2
         error('requires 2 arguments: problem and Manopt_opts');
     end
 
+    % if preconditioner_type is not given, default to "jacobi"
+    if nargin < 3
+        preconditioner_type = "block_cholesky";
+    end
+
+
 
     %%%%%% general problem info
-    Q = problem.Q;
     function [f, store] = cost(X, store)
         if ~isfield(store, 'QX')
-            store.QX = Q*X;
+            store.QX = Qproduct(X, problem);
         end
-        QX = store.QX;
-
-        f = 0.5* trace(X'*QX);
+        f = 0.5* trace(X'*store.QX);
     end
 
     function [g, store] = egrad(X, store)
         if ~isfield(store, 'QX')
-            store.QX = Q*X;
+            store.QX = Qproduct(X, problem);
         end
         g = store.QX;
     end
 
     function [h, store] = ehess(~, dX, store)
-        h = Q * dX;
+        h = Qproduct(dX, problem);
     end
 
     problem.cost = @cost;
     problem.egrad = @egrad;
     problem.ehess = @ehess;
 
-    %%%%%% problem info - unique to lifted dimension
-
-    base_dim = problem.dim;
+    fprintf("Setting up preconditioner...\n")
+    precon_opts = struct();
+    precon_opts.type = preconditioner_type;
+    precon_opts.condition_number_ub = 1e4;
+    precon_opts.block_size = problem.dim+2;
+    problem.precon_function = precon_function_factory(problem, precon_opts);
 
     % check Manopt_opts.init to see if it is "odom", or "gt"
     if Manopt_opts.init == "odom"
@@ -46,9 +52,13 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         warning("No valid initialization given. Using random point as default.")
     end
 
-    % if we know there are no loop closures and we're randomly initializing then
-    % let's skip a few dimensions higher (from experience)
-    lifted_dim = base_dim; % start out by lifting some dimensions
+    if problem.use_marginalized && ~isempty(init_point)
+        marginalized_dim = problem.dim * problem.num_poses + problem.num_range_measurements;
+        init_point = init_point(1: marginalized_dim, :);
+    end
+
+    % we can start out by lifting some dimensions if we want
+    lifted_dim = problem.dim;
 
     cora_iterates_info = [];
     soln_is_optimal = false;
@@ -59,8 +69,18 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         % solve the lifted problem and try to certify it
         fprintf("Trying to solve at rank %d\n", lifted_dim);
         [Xlift, Fval_lifted, manopt_info, Manopt_opts] = update_problem_for_dim_and_solve(problem, lifted_dim, init_point, Manopt_opts, add_noise_to_lifted_pt, min_eigvec, min_eigval);
-        [soln_is_optimal, ~, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity);
-        add_noise_to_lifted_pt = false;
+        certEpsilon = Fval_lifted * 1e-6;
+        [soln_is_optimal, min_eigvec, min_eigval] = certify_solution(problem, Xlift, Manopt_opts.verbosity, certEpsilon);
+
+        % Xlift should be tall and skinny
+        assert(size(Xlift, 1) > size(Xlift, 2));
+
+        % if eigpairs are empty then add noise to lifted point
+        if isempty(min_eigvec) && isempty(min_eigval)
+            add_noise_to_lifted_pt = true;
+        else
+            add_noise_to_lifted_pt = false;
+        end
 
         % add all of the new Xvals from manopt_info to cora_iterates_info but do not
         % add anything else from manopt_info
@@ -79,38 +99,52 @@ function [X, final_soln_optimal, cora_iterates_info, Manopt_opts] = cora(problem
         end
     end
 
-    fprintf("The staircase algorithm has found an optimal solution with dimension %d.\n", lifted_dim);
+    fprintf("The staircase algorithm has found an optimal solution with dimension %d and cost %f.\n", lifted_dim, Fval_lifted);
     fprintf("Singular values of lifted solution are: %s \n", mat2str(svd(Xlift)));
 
     % print the rank, singular values, and cost of the solution
-    if Manopt_opts.verbosity > 0
-        fprintf("Lifted solution has rank %d\n", rank(Xlift));
-        fprintf("Cost of lifted solution is %f\n", Fval_lifted);
+    certified_lower_bound = Fval_lifted;
+
+    if size(Xlift, 2) == problem.dim
+        X = Xlift;
+        final_soln_cost = certified_lower_bound;
+        fprintf("Problem was solved at the base dimension, no rounding and refinement needed.\n")
+    else
+        [X, Fval_base_dim, soln_manopt_info] = round_lifted_solution_and_refine(Xlift, problem, Manopt_opts);
+        fprintf("Refined cost is %f\n", Fval_base_dim);
+        cora_iterates_info = [cora_iterates_info, soln_manopt_info];
+        final_soln_cost = Fval_base_dim;
+        gap = final_soln_cost - certified_lower_bound;
+        rel_suboptimality = gap / certified_lower_bound;
+        warning("Gap: %d Rel Gap: %d", gap, rel_suboptimality*100)
+        if abs(rel_suboptimality) < 0.01
+            warning("Final solution is optimal");
+        elseif gap < 0
+            warning("Suboptimality gap is negative - something is wrong. Gap is %f", gap);
+        else
+            warning("Gap between final solution and optimal solution is %f", gap);
+            warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
+        end
+
     end
 
+    optimality_info.certified_lower_bound = certified_lower_bound;
+    optimality_info.final_soln_cost = final_soln_cost;
+end
+
+function [X, Fval_base_dim, soln_manopt_info] = round_lifted_solution_and_refine(Xlift, problem, Manopt_opts)
     Xround = round_solution(Xlift, problem, Manopt_opts.verbosity);
+    assert(check_value_is_valid(problem, Xround))
 
     % refine the rounded solution with one last optimization
     add_noise_to_pt = false;
-    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, base_dim, Xround', Manopt_opts, add_noise_to_pt, [], []);
-    cora_iterates_info = [cora_iterates_info, soln_manopt_info];
+    [X, Fval_base_dim, soln_manopt_info, ~] = update_problem_for_dim_and_solve(problem, problem.dim, Xround', Manopt_opts, add_noise_to_pt, [], []);
+    assert(check_value_is_valid(problem, X))
 
     % print the rank, singular values, and cost of the solution
     if Manopt_opts.verbosity > 0
         fprintf("Refined solution has rank %d\n", rank(X));
         fprintf("Cost of refined solution is %f\n", Fval_base_dim);
-    end
-
-    gap = Fval_base_dim - Fval_lifted;
-    rel_suboptimality = gap / Fval_base_dim;
-    if gap < 1e-5
-        warning("Final solution is optimal");
-        final_soln_optimal = true;
-    else
-        % print the gap between the final solution and the optimal solution
-        warning("Gap between final solution and optimal solution is %f", gap);
-        warning("Relative suboptimality is %f%s", rel_suboptimality*100, "%");
-        final_soln_optimal = false;
     end
 
 end

@@ -1,33 +1,37 @@
-function animate_lifted_solver_trajectory(data_path, show_gt)
-    res_path = strrep(data_path, ".mat", "_results.mat");
-    cora_iterates_info_path = strrep(data_path, '.mat', '_cora_iterates_info.mat');
-
-
-    problem_data = load_ra_slam_problem(data_path);
-    load(res_path);
-    load(cora_iterates_info_path);
+function animate_lifted_solver_trajectory(problem_data, cora_iterates_info, show_gt)
 
     num_iterates = length(cora_iterates_info);
-    [num_cols, num_rows] = size(problem_data.X_odom);
-    Xvals_rounded = zeros(num_iterates, num_rows, num_cols);
+    dim = problem_data.dim;
 
-    gt_vals = align_solution_by_first_pose(problem_data.X_gt', problem_data);
+    first_R_idxs = problem_data.all_R_idxs(1:dim);
+    gt_vals = align_solution_by_first_pose(problem_data.X_gt',...
+        dim,...
+        first_R_idxs,...
+        problem_data.all_t_idxs,...
+        problem_data.all_l_idxs);
     gt_color = [0.5, 0.5, 0.5];
+
+    [num_cols, num_rows] = size(gt_vals');
+    Xvals_rounded = zeros(num_iterates, num_rows, num_cols);
 
     for idx = 1:num_iterates
         % for each iterate, we want to round the solution to SE(d) and
         % align it such that the first pose is at the origin
         verbosity = 0;
+        if problem_data.use_marginalized
+            full_lifted_unaligned_soln = extract_translations_from_marginalized_solution(cora_iterates_info(idx).Xvals', problem_data);
+            full_rounded_unaligned_soln = round_solution(full_lifted_unaligned_soln, problem_data, verbosity);
+        else
+            full_rounded_unaligned_soln = round_solution(cora_iterates_info(idx).Xvals', problem_data, verbosity);
+        end
         Xvals_rounded(idx, :, :) = align_solution_by_first_pose(...
-            round_solution(cora_iterates_info(idx).Xvals',problem_data, verbosity), problem_data...
-        );
+            full_rounded_unaligned_soln, ...
+            dim, first_R_idxs, problem_data.all_t_idxs, problem_data.all_l_idxs);
     end
 
     % get the max and min x and y values for the plot
-    t_idxs = problem_data.all_t_idxs;
-    l_idxs = problem_data.all_l_idxs;
-    all_xval_translations = Xvals_rounded(:, :, t_idxs);
-    all_xval_landmarks = Xvals_rounded(:, :, l_idxs);
+    all_xval_translations = Xvals_rounded(:, :, problem_data.all_t_idxs);
+    all_xval_landmarks = Xvals_rounded(:, :, problem_data.all_l_idxs);
     max_xvals_translations = max(all_xval_translations, [], [1,3]);
     min_xvals_translations = min(all_xval_translations, [], [1,3]);
 
@@ -76,21 +80,27 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
     % get a different color for each robot
     colors = lines(num_robots);
     for robot_idx = 1:num_robots
-        robot_t_idxs{robot_idx} = get_robot_t_idxs(problem_data, robot_idx);
+        robot_t_idxs{robot_idx} = get_robot_t_idxs(problem_data,  robot_idx);
         if show_gt
             % plot gt trajectory as black dashed line with line width 1
-            plot(gt_vals(1, robot_t_idxs{robot_idx}), gt_vals(2, robot_t_idxs{robot_idx}), '-', 'Color', gt_color, 'LineWidth', 1);
+            if problem_data.use_marginalized
+                gt_t_idxs = get_robot_t_idxs(problem_data,  robot_idx);
+                plot(gt_vals(1, gt_t_idxs), gt_vals(2, gt_t_idxs), '-', 'Color', gt_color, 'LineWidth', 1);
+            else
+                plot(gt_vals(1, robot_t_idxs{robot_idx}), gt_vals(2, robot_t_idxs{robot_idx}), '-', 'Color', gt_color, 'LineWidth', 1);
+            end
         end
         robot_plots{robot_idx} = plot(Xvals(1, robot_t_idxs{robot_idx}), Xvals(2, robot_t_idxs{robot_idx}), 'Color', colors(robot_idx, :));
     end
 
     % make all of the landmark plot objects
     fprintf('Generating all of the plots for the landmarks\n')
+    l_idxs = problem_data.all_l_idxs;
     if show_gt
         % plot gt_vals as grey x's
         scatter(gt_vals(1, l_idxs), gt_vals(2, l_idxs), 30, 'x', 'MarkerEdgeColor', gt_color, 'LineWidth', 2);
     end
-    l = scatter(Xvals(1,problem_data.all_l_idxs), Xvals(2, problem_data.all_l_idxs), 30, 'bo', "LineWidth", 2);
+    l = scatter(Xvals(1,l_idxs), Xvals(2, l_idxs), 30, 'bo', "LineWidth", 2);
 
     % set a legend if we are showing the ground truth
     if show_gt
@@ -101,9 +111,9 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
 
     % run over the iterates and show all of the plot
     fprintf('Performing plotting and saving frames to make .gif\n')
-    gif_fpath = strrep(data_path, ".mat", "_projected_iterates.gif");
-    video_fpath = strrep(data_path, "factor_graph.mat", "cora_animation.avi");
-    make_new_gif = true;
+    % gif_fpath = strrep(data_path, ".mat", "_projected_iterates.gif");
+    % video_fpath = strrep(data_path, "factor_graph.mat", "cora_animation.avi");
+    make_new_gif = false;
     save_images = false;
 
     if make_new_gif
@@ -112,6 +122,8 @@ function animate_lifted_solver_trajectory(data_path, show_gt)
         open(vidWriter);
     end
     for idx = 1:num_iterates
+
+        pause(0.1);
 
         Xvals = squeeze(Xvals_rounded(idx, :, :));
 

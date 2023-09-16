@@ -1,7 +1,7 @@
-function V = convert_vertically_stacked_block_matrix_to_column_vector_matrix(stacked_block_mat, block_height, blocks_symmetric)
+function V = convert_vertically_stacked_block_matrix_to_row_vector_matrix(stacked_block_mat, block_height, blocks_symmetric)
     %{
     Takes a matrix of stacked blocks and converts it such that each column is
-    the column-wise vectorized version of the corresponding block
+    the row-wise vectorized version of the corresponding block
 
     E.g.,   A = [A1; A2; A3; A4] -> V = [vec(A1), vec(A2), vec(A3), vec(A4)]
             A \in R^{4n x m}
@@ -31,7 +31,6 @@ function V = convert_vertically_stacked_block_matrix_to_column_vector_matrix(sta
     else
         vector_height = block_height * width;
     end
-    column_vector_shape = [vector_height, num_blocks];
 
     if issparse(stacked_block_mat)
         % get the indices and values of the matrix
@@ -56,15 +55,16 @@ function V = convert_vertically_stacked_block_matrix_to_column_vector_matrix(sta
             values(diagonal_indices) = values(diagonal_indices) / sqrt(2);
         end
 
-        % calculate the column offset (i.e., how much the vectorized index is offset due to the column stacking)
+        % calculate the row offset (i.e., how much the vectorized index is
+        % offset due to the row stacking)
         if blocks_symmetric
             % if symmetric then the column offset is sum of the lengths of the
             % upper-triangular sections of all previous columns [c_off = c*(c-1)/2]
-            column_offset = (block_col_indices-1) .* block_col_indices / 2;
+            row_offset = (block_row_indices-1) .* block_row_indices / 2;
         else
-            column_offset = (block_col_indices-1) * block_height; % get the row offset due to stacking the columns.
+            row_offset = (block_row_indices-1) * width; % get the row offset due to stacking the columns.
         end
-        new_row_indices = block_row_indices + column_offset;
+        new_row_indices = block_col_indices + row_offset;
 
         % new column indices are just the matrix block that the element is in
         new_col_indices = ceil(row_indices / block_height);
@@ -78,27 +78,7 @@ function V = convert_vertically_stacked_block_matrix_to_column_vector_matrix(sta
         % create the new sparse matrix
         V = sparse(new_row_indices, new_col_indices, values, vector_height, num_blocks);
     else
-        % print a warning so we know we're using a dense matrix
-        warning("Reshaping a dense matrix to a column vector matrix");
-
-        % take a matrix of stacked blocks and convert it such that each column is
-        % the vectorized version of the corresponding block
-        int1 = reshape(stacked_block_mat', [width, block_height, num_blocks]);
-        int2 = permute(int1, [2, 1, 3]);
-        V = reshape(int2, column_vector_shape);
-
-        if blocks_symmetric && num_blocks == 1
-            % divide diagonal elements by 2
-            idxs = 1:block_height;
-            diag_idxs = sub2ind(size(V), idxs, idxs);
-            V(diag_idxs) = V(diag_idxs) / sqrt(2);
-
-            % get just upper triangular part
-            triu_idxs = triu(true(size(V)));
-            V = V(triu_idxs);
-        else
-            error("Dense symmetric matrices not fully supported");
-        end
+        error("Dense matrices not supported");
     end
 
 

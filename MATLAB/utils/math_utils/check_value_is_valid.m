@@ -22,9 +22,9 @@ function is_valid = check_value_is_valid(problem, X)
         assert (size(R, 2) == dim);
 
         det_R = det(R);
-        if (abs(det_R - 1) > 1e-6)
+        if (abs(abs(det_R) - 1) > 1e-6)
             is_valid = false;
-            fprintf('rot %d: det(R) is not 1, det(R) = %f\n',i, det_R);
+            fprintf('rot %d: det(R) is not 1 or -1, det(R) = %f\n',i, det_R);
             return;
         end
 
@@ -44,7 +44,7 @@ function is_valid = check_value_is_valid(problem, X)
     for i = 1:length(all_dist_idxs)
         dist_i_idx = all_dist_idxs(i);
         dist_i = X(:, dist_i_idx);
-        if (norm(dist_i) > 1 + 1e-6)
+        if (abs(norm(dist_i) - 1) > 1e-6)
             is_valid = false;
             fprintf('dist %d: norm is not 1, norm = %f',i, norm(dist_i));
             return;

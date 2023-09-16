@@ -1,24 +1,35 @@
-function [least_eigvec, least_eigval, not_converged] = get_saddle_escape_direction(S)
+function [least_eigvec, least_eigval] = get_saddle_escape_direction(S, X)
     % using strategy from Rosen, "Accelerating Certifiable Estimation with
     % Preconditioned Eigensolvers"
+    assert (size(S,1) == size(S,2), 'S must be square, but is %d x %d', size(S,1), size(S,2));
     n = size(S,1);
-    spI = speye(n);
+    if nargin < 2
+        X = rand(n, 5);
+    end
 
-    block_size = 6;
+    assert (size(X,1) == n, 'X must have same number of rows as S, but is %d x %d', size(X,1), size(X,2));
+
+    x_cols = size(X, 2);
+    num_xcols_use = max(2, x_cols-3);
+    n_extra_cols = 4;
+    block_size = x_cols + n_extra_cols;
     initial_block = zeros(n, block_size);
-    initial_block(:, 1) = 1e-3 * rand(n, 1);
-    initial_block(:, 2:end) = rand(n, block_size - 1);
+    initial_block(:, 1:num_xcols_use) = X(:, 1:num_xcols_use);
+    initial_block(:, num_xcols_use+1:end) = rand(n, block_size - num_xcols_use);
 
     global L
     global LT
     global D
     global P
     global PT
-    nu = 1e-5;
-    M = S + (nu * spI);
-    [L, D_orig, P] = ldl(M);
+    % global p
+    % global scale
+    [L, D_orig, P] = ldl(S);
+    % [L, D_orig, p, scale, ~] = ildl(S);
     LT = L';
     PT = P';
+    % Ainv = scale P Linv' Dinv Linv P' scale
+
 
     % for each block 'k' of D_orig, let the corresponding block of D be
     % D_k = Q * diag(1/ abs(lambda_1), ..., 1/ abs(lambda_block_size)) * Q'
@@ -53,15 +64,12 @@ function [least_eigvec, least_eigval, not_converged] = get_saddle_escape_directi
             num_blk_size_two = num_blk_size_two + 1;
         end
     end
-
     verbosity_level = 0;
-    [block_eigvecs, eigvals, ~, ~, ~] = lobpcg(...
-        initial_block, M,...
+    [block_eigvecs, eigvals, failureFlag, lambdaHist, resNormHist] = lobpcg(...
+        initial_block, S,...
         [], 'precfun',...
         1e-4, 50,  verbosity_level);
-
     least_eigvec = block_eigvecs(:, 1);
     least_eigval = eigvals(1);
-    not_converged = least_eigval > 0;
 
 end

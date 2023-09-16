@@ -1,4 +1,4 @@
-function [stop, reason] = relative_func_decrease_stopfun(manopt_problem, x, info, last, rel_func_decrease_tol)
+function [stop, reason] = relative_func_decrease_stopfun(manopt_problem, x, info, last, rel_func_decrease_tol, tolgradnorm)
 %function stop = relative_func_decrease_stopfun(manopt_problem, x, info, last, rel_func_decrease_tol)
 %
 % This function provides an additional stopping criterion for the Manopt
@@ -41,9 +41,10 @@ else
 
         previous_val = info(previous_accepted_iterate_idx).cost;
         current_val = info(last).cost;
+        current_gradient = info(last).gradnorm;
 
         rel_change_in_val = (previous_val - current_val) / previous_val;
-        if rel_change_in_val < rel_func_decrease_tol
+        if rel_change_in_val < rel_func_decrease_tol && current_gradient < (tolgradnorm * 10)
             stop = 6;
             % reason = 'relative decrease in function below tolerance';
             % fprintf('Stopping due to relative decrease in function below tolerance: %e < %e\n', rel_change_in_val, rel_func_decrease_tol);
