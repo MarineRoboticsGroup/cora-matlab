@@ -116,6 +116,7 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
         final_soln_cost = Fval_base_dim;
         gap = final_soln_cost - certified_lower_bound;
         rel_suboptimality = gap / certified_lower_bound;
+        warning("Gap: %d Rel Gap: %d", gap, rel_suboptimality*100)
         if abs(rel_suboptimality) < 0.01
             warning("Final solution is optimal");
         elseif gap < 0
