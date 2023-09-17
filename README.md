@@ -6,10 +6,6 @@ This is the official repository for the paper ["Certifiably Correct Range-Aided 
 
 For now we provide a simple MATLAB implementation build on [manopt](https://www.manopt.org/), primarily as a demo piece for extension and comparison.
 
-To see how CORA works and play around with various things, please look at the
-file `MATLAB/main.m`. We have several example data files stored in `data/MATLAB`
-for you to try out.
-
 ## Examples
 
 Here is CORA in action on the Plaza1 and Plaza2 experiments from the
