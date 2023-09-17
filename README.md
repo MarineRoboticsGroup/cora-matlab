@@ -13,7 +13,9 @@ for you to try out.
 ## Examples
 
 Here is CORA in action on the Plaza1 and Plaza2 experiments from the
-[CMU Navigating with Ranging Radios Dataset](https://infoscience.epfl.ch/record/283435)
+[CMU Navigating with Ranging Radios Dataset](https://infoscience.epfl.ch/record/283435). 
+In these animations the solver is initialized randomly to
+emphasize that CORA's performance is agnostic to the provided initialization.
 
 | Plaza2      | Plaza2     |
 | ------------| -----------|
