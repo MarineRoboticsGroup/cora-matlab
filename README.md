@@ -1,10 +1,8 @@
 # Certifiably Correct Range-Aided SLAM (CORA)
 
-This is the official repository for the paper ["Certifiably Correct Range-Aided SLAM"](https://arxiv.org/abs/2302.11614) by
-[Alan Papalia](https://alanpapalia.github.io), Andrew Fishberg, Brendan O'Neill, [Jonathan P. How](https://www.mit.edu/~jhow/),
-[David M. Rosen](https://david-m-rosen.github.io/) and [John J. Leonard](https://meche.mit.edu/people/faculty/JLEONARD@MIT.EDU).
+This is a (no longer supported) MATLAB implementation build on [manopt](https://www.manopt.org/), primarily as a demo piece for extension and comparison.
 
-For now we provide a simple MATLAB implementation build on [manopt](https://www.manopt.org/), primarily as a demo piece for extension and comparison.
+We recommend you look at our [official C++ implementation](https://github.com/MarineRoboticsGroup/cora) for a performant and actively maintained library.
 
 ## Examples
 
@@ -24,8 +22,6 @@ You can recreate all of the experiments from our paper using the data and script
 
 ## Feedback, Support, and Contributions
 
-Any feedback, issues, or contributions are welcome and encouraged! We'll do the best we can to provide support for hopeful users.
-
-A C++ implementation is a hopeful future contribution. Please reach out if you are interested in contributing or have use for this, as it may affect how we prioritize development!
+Any feedback, issues, or contributions are welcome and encouraged! Although the development on this is mostly dead, we'll do the best we can to provide support for hopeful users.
 
 Enjoy!
