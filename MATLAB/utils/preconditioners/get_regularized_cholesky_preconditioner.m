@@ -7,8 +7,23 @@ function precon_function = get_regularized_cholesky_preconditioner(Q, condition_
 
     % https://www.mathworks.com/help/matlab/ref/ichol.html#mw_b1e10f55-a0c7-4d70-aedf-32ce0761ac96
     Q_width = size(Q, 1);
-    ichol_opts.diagcomp = lambda_reg;
-    L = ichol(Q(1:Q_width-1, 1:Q_width-1), ichol_opts);
-    LT = L';
-    precon_function = @(x) [LT \ (L \ x(1:Q_width-1, :)); zeros(1, size(x, 2))];
+    % ichol_opts.diagcomp = lambda_reg;
+    % L = ichol(Q(1:Q_width-1, 1:Q_width-1), ichol_opts);
+    % LT = L';
+    % precon_function = @(x) [LT \ (L \ x(1:Q_width-1, :)); zeros(1, size(x, 2))];
+
+    I_comp = lambda_reg * speye(Q_width-1);
+    [R, flag, P] = chol(Q(1:Q_width-1, 1:Q_width-1) + I_comp);
+    if flag == 0
+        % Permute the Cholesky factor to match the original ordering
+        Rp = R(P,:);
+    
+        % Transpose the Cholesky factor
+        RT = Rp';
+    
+        % Define the preconditioning function
+        precon_function = @(x) [RT \ (Rp \ x(1:Q_width-1, :)); zeros(1, size(x, 2))];
+    else
+        disp('Cholesky decomposition failed. Q(1:Q_width-1, 1:Q_width-1) is not positive definite.');
+    end
 end
