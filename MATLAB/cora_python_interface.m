@@ -5,7 +5,7 @@
     )
 %}
 function cora_python_interface(problem_fpath, show_animation, animation_show_gt, look_for_cached_soln, solve_marginalized_problem, save_iterates_info)
-
+    maxNumCompThreads(1);
     if ~exist('save_iterates_info', 'var')
         save_iterates_info = true;
     end
@@ -31,14 +31,21 @@ function cora_python_interface(problem_fpath, show_animation, animation_show_gt,
         prob = parse_pyfg_text(problem_fpath, solve_marginalized_problem, verbose_parsing);
 
         % set the options for the solver
-        manopt_opts.init = "random";
+        % manopt_opts.init = "random";
+        manopt_opts.init = "odom";
         manopt_opts.verbosity = 0;
         manopt_opts.debug = 0;
         manopt_opts = get_manopt_opts(manopt_opts);
 
         % run the solver
-        [X, optimality_info, cora_iterates_info, ~] = cora(prob, manopt_opts, "block_cholesky");
+        precon_type = "block_cholesky";
+        % precon_type = "ichol";
+        % precon_type = "block_jacobi";
+        % precon_type = "jacobi";
+        precon_type = "regularized_cholesky";
 
+        [X, optimality_info, cora_iterates_info, ~] = cora(prob, manopt_opts, precon_type);
+        
         % values from the true final solution
         res = struct();
         res.X = X; % the final solution (rounded and refined)

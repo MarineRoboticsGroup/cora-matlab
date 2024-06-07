@@ -12,7 +12,7 @@ function precon_function = precon_function_factory(problem, opts)
     elseif strcmp(opts.type, 'jacobi')
         precon_function = get_jacobi_preconditioner(A);
     elseif strcmp(opts.type, 'regularized_cholesky')
-        precon_function = get_regularized_cholesky_preconditioner(A, opts.condition_number_ub);
+        precon_function = get_regularized_cholesky_preconditioner(problem, opts.condition_number_ub);
     elseif strcmp(opts.type, 'block_cholesky')
         precon_function = get_block_cholesky_preconditioner(problem);
     elseif strcmp(opts.type, 'none')

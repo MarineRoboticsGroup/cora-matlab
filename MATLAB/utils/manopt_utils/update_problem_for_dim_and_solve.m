@@ -22,9 +22,12 @@ function [Xlift, Fval, manopt_info, Manopt_opts] = update_problem_for_dim_and_so
     problem.M = M;
 
     % set preconditioner
+    precon_cnt = 0;
     function [u, store] = preconditioner(X, U, store, prob, mani)
         u = prob.precon_function(U);
         u = mani.tangent(X, u);
+        precon_cnt = precon_cnt + 1;
+        fprintf("Preconditioner called %d times\n", precon_cnt);
     end
     problem.precon = @(X, U, store) preconditioner(X, U, store, problem, M);
 

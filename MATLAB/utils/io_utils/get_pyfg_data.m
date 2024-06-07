@@ -230,7 +230,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             ranges{range_edge_id} = range;
 
             % Store the range measurement precision
-            variance = variance * 5;
+            variance = variance;
             range_precision{range_edge_id} = 1 / variance;
 
         elseif(strcmp(token, 'VERTEX_SE2:PRIOR'))

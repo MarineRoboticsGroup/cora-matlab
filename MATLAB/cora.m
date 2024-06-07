@@ -38,7 +38,7 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
     fprintf("Setting up preconditioner...\n")
     precon_opts = struct();
     precon_opts.type = preconditioner_type;
-    precon_opts.condition_number_ub = 1e4;
+    precon_opts.condition_number_ub = 1e6;
     precon_opts.block_size = problem.dim+2;
     problem.precon_function = precon_function_factory(problem, precon_opts);
 

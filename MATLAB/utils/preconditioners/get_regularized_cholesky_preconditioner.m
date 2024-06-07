@@ -1,29 +1,23 @@
-function precon_function = get_regularized_cholesky_preconditioner(Q, condition_number_ub)
-    [~, neg_greatest_eigval] = get_saddle_escape_direction(-Q);
-    if (neg_greatest_eigval > 0)
-        error('Failed to compute the greatest eigenvalue of the data matrix Q, should be negative')
-    end
-    lambda_reg = -neg_greatest_eigval / (condition_number_ub - 1);
+function precon_function = get_regularized_cholesky_preconditioner(prob, condition_number_ub)
+Dnorm = eigs(prob.Q, 1, 'largestreal');
+lambda_reg = Dnorm / (condition_number_ub - 1);
 
-    % https://www.mathworks.com/help/matlab/ref/ichol.html#mw_b1e10f55-a0c7-4d70-aedf-32ce0761ac96
-    Q_width = size(Q, 1);
-    % ichol_opts.diagcomp = lambda_reg;
-    % L = ichol(Q(1:Q_width-1, 1:Q_width-1), ichol_opts);
-    % LT = L';
-    % precon_function = @(x) [LT \ (L \ x(1:Q_width-1, :)); zeros(1, size(x, 2))];
 
+if prob.use_marginalized
+    idxs = [prob.all_R_idxs, prob.all_d_idxs];
+    [R, ~, P] = chol(prob.Q(idxs, idxs) + speye(length(idxs))*lambda_reg, 'lower');
+    RT = R';
+    PT = P';
+    precon_function = @(x) P * (RT \ (R \ (PT * x)));
+else
+    Q_width = size(prob.Q, 1);
     I_comp = lambda_reg * speye(Q_width-1);
-    [R, flag, P] = chol(Q(1:Q_width-1, 1:Q_width-1) + I_comp);
-    if flag == 0
-        % Permute the Cholesky factor to match the original ordering
-        Rp = R(P,:);
+    [R, ~, P] = chol(prob.Q(1:Q_width-1, 1:Q_width-1) + I_comp, 'lower');
+    RT = R';
+    PT = P';
     
-        % Transpose the Cholesky factor
-        RT = Rp';
-    
-        % Define the preconditioning function
-        precon_function = @(x) [RT \ (Rp \ x(1:Q_width-1, :)); zeros(1, size(x, 2))];
-    else
-        disp('Cholesky decomposition failed. Q(1:Q_width-1, 1:Q_width-1) is not positive definite.');
-    end
+    % Define the preconditioning function
+    precon_function = @(x) [P * (RT \ (R \ (PT * x(1:Q_width-1, :))));
+        zeros(1, size(x, 2))];
+end
 end
