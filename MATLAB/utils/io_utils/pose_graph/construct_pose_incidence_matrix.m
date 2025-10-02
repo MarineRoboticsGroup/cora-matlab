@@ -1,4 +1,4 @@
-function A = construct_pose_incidence_matrix(measurements, var_idx_mapping)
+function A = construct_pose_incidence_matrix( pose_measurements, pose_landmark_measurements, var_idx_mapping)
 %function A = construct_pose_incidence_matrix(measurements)
 %
 % This function computes and returns the oriented incidence matrix of the
@@ -12,11 +12,13 @@ function A = construct_pose_incidence_matrix(measurements, var_idx_mapping)
 
 % Copyright (C) 2016 by David M. Rosen
 
-N = var_idx_mapping.pose_var_name_to_cnt.length;  % N = number of nodes in the pose graph
+measurements.edges = [pose_measurements.edges; pose_landmark_measurements.edges];
+
+N = var_idx_mapping.translation_var_name_to_cnt.length;  % Number of translation variables
 M = size(measurements.edges, 1);  % Number of edges in the pose graph
 
-out_nodes = cell2mat(values(var_idx_mapping.pose_var_name_to_cnt, measurements.edges(:, 1)));
-in_nodes = cell2mat(values(var_idx_mapping.pose_var_name_to_cnt, measurements.edges(:, 2)));
+out_nodes = cell2mat(values(var_idx_mapping.translation_var_name_to_cnt, measurements.edges(:, 1)));
+in_nodes = cell2mat(values(var_idx_mapping.translation_var_name_to_cnt, measurements.edges(:, 2)));
 
 assert(all(out_nodes >= 1) && all(out_nodes <= N));
 assert(all(in_nodes >= 1) && all(in_nodes <= N));

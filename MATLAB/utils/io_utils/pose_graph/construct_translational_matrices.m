@@ -1,4 +1,4 @@
-function [T, Omega] = construct_translational_matrices(measurements, var_idx_mapping)
+function [T, Omega] = construct_translational_matrices(pose_measurements, pose_landmark_measurements, var_idx_mapping)
 %function [T, omega] = construct_translational_matrices(measurements)
 %
 % This function computes and returns the matrix T containing the raw
@@ -8,8 +8,15 @@ function [T, Omega] = construct_translational_matrices(measurements, var_idx_map
 
 % Copyright (C) 2016 by David M. Rosen
 
+% combine translational data from  pose and pose-landmark measurements
+% by concatenating the cell arrays of measurements and edges
+measurements.t = [pose_measurements.t, pose_landmark_measurements.t];
+measurements.tau = [pose_measurements.tau, pose_landmark_measurements.tau];
+measurements.edges = [pose_measurements.edges; pose_landmark_measurements.edges];
+
+
 D = length(measurements.t{1}); % D = dimension of SE(d)
-N = var_idx_mapping.pose_var_name_to_cnt.length;  % N = number of nodes in the pose graph
+N = var_idx_mapping.pose_var_name_to_cnt.length; % N = number of translation variables
 M = size(measurements.edges,1); % M = number of edges in the pose graph
 
 %Allocate storate for sparse matrix

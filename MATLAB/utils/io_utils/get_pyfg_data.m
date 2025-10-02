@@ -39,6 +39,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
 
     % measurements
     pose_edge_id = 0;
+    pose_landmark_edge_id = 0;
     range_edge_id = 0;
 
     % ground truth
@@ -177,6 +178,28 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             % value of the parameter kappa
             kappa{pose_edge_id} = 3 / (2 *trace(measurement_covar(4:6, 4:6)));
 
+        elseif(strcmp(token, 'EDGE_SE2_XY'))
+            % print the read line and throw an error
+            pose_landmark_edge_id = pose_landmark_edge_id + 1;
+
+            % EDGE_SE2_XY 1.000000000 A1 L2 12.000000000 -11.000000000 % 1.000000000 0.000000000 1.000000000
+            % EDGE_SE2_XY timestamp id1 id2 dx dy C11 C12 C22
+            C = textscan(read_line, '%s %f %s %s %f %f %f %f %f');
+            [~, ~, id1, id2, dx, dy, C11, C12, C22] = C{:};
+
+            pose_landmark_edges(pose_landmark_edge_id, :) = [id1 , id2 ];
+            pose_landmark_t{pose_landmark_edge_id} = [dx, dy]';
+
+            % Reconstruct the information matrix
+            measurement_covar = ...
+                [C11, C12;
+                C12, C22];
+
+            % Extract and store an outer approximation for the translational
+            % measurement precision
+            pose_landmark_tau{pose_landmark_edge_id} = 2 / trace( measurement_covar);
+
+
         elseif(strcmp(token, 'EDGE_SE2'))
             % 2D Measurement
             assert (d == 2, "2D observation in 3D problem")
@@ -230,7 +253,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
             ranges{range_edge_id} = range;
 
             % Store the range measurement precision
-            variance = variance * 5;
+            % variance = variance * 5;
             range_precision{range_edge_id} = 1 / variance;
 
         elseif(strcmp(token, 'VERTEX_SE2:PRIOR'))
@@ -245,16 +268,41 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
 
 
     % Construct and return pose_measurements struct
-    pose_measurements.edges = pose_edges;
-    pose_measurements.R = R;
-    pose_measurements.t = t;
-    pose_measurements.kappa = kappa;
-    pose_measurements.tau = tau;
+    if ~exist("pose_edges", "var")
+        pose_measurements.edges = [];
+        pose_measurements.R = [];
+        pose_measurements.t = [];
+        pose_measurements.kappa = [];
+        pose_measurements.tau = [];
+    else
+        pose_measurements.edges = pose_edges;
+        pose_measurements.R = R;
+        pose_measurements.t = t;
+        pose_measurements.kappa = kappa;
+        pose_measurements.tau = tau;
+    end
+
+    % construct and return pose_landmark_measurements struct
+    if ~exist("pose_landmark_edges", "var")
+        pose_landmark_measurements.edges = [];
+        pose_landmark_measurements.t = [];
+        pose_landmark_measurements.tau = [];
+    else
+        pose_landmark_measurements.edges = pose_landmark_edges;
+        pose_landmark_measurements.t = pose_landmark_t;
+        pose_landmark_measurements.tau = pose_landmark_tau;
+    end
 
     % Construct and return range_measurements struct
-    range_measurements.edges = range_edges;
-    range_measurements.range = ranges;
-    range_measurements.precision = range_precision;
+    if ~exist("range_edges", "var")
+        range_measurements.edges = [];
+        range_measurements.range = [];
+        range_measurements.precision = [];
+    else
+        range_measurements.edges = range_edges;
+        range_measurements.range = ranges;
+        range_measurements.precision = range_precision;
+    end
 
     % Construct and return landmark_priors struct
     landmark_priors.names = landmark_prior_names;
@@ -272,6 +320,7 @@ function [measurements, var_idx_mapping, d, true_vals] = get_pyfg_data(pyfg_fpat
 
     % fill measurements struct
     measurements.pose_measurements = pose_measurements;
+    measurements.pose_landmark_measurements = pose_landmark_measurements;
     measurements.range_measurements = range_measurements;
 
     if ~exist('pose_priors', 'var')

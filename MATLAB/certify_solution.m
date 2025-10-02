@@ -6,6 +6,11 @@ function [is_opt, min_eigvec, min_eigval] = certify_solution(problem_data, X, ve
         certEpsilon = 1e-5;
     end
 
+    if certEpsilon < 1e-7
+        warning("certEpsilon very small - setting to 1e-7")
+        certEpsilon = 1e-7;
+    end
+
     % set up the problem
     stacked_constraints = problem_data.stacked_constraints;
     min_eigvec = [];

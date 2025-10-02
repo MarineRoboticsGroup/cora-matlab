@@ -89,7 +89,11 @@ function K = get_constraints_as_stacked_block_matrix(problem)
     % Now we do the same thing for the range constraints, which are thankfully
     % just 1s on the diagonals. Each entry is a unique constraint and needs
     % to occupy a separate block
-    last_rotation_idx = diag_cols(end);
+    if num_poses > 0
+        last_rotation_idx = diag_cols(end);
+    else
+        last_rotation_idx = 0;
+    end
     range_diag_rows = last_rotation_idx + (1:num_range_constraints);
     range_diag_cols = range_diag_rows;
 

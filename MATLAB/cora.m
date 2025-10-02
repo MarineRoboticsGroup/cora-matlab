@@ -58,7 +58,7 @@ function [X, optimality_info, cora_iterates_info, Manopt_opts] = cora(problem, M
     end
 
     % we can start out by lifting some dimensions if we want
-    lifted_dim = problem.dim;
+    lifted_dim = problem.dim+2;
 
     cora_iterates_info = [];
     soln_is_optimal = false;
